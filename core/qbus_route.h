@@ -1,0 +1,42 @@
+#ifndef __QBUS__ROUTE__H
+#define __QBUS__ROUTE__H 1
+
+#include "qbus.h"
+
+#include "sys/cape_export.h"
+#include "sys/cape_err.h"
+
+//=============================================================================
+
+struct QBusFrame_s; typedef struct QBusFrame_s* QBusFrame;
+struct QBusConnection_s; typedef struct QBusConnection_s* QBusConnection;
+
+//=============================================================================
+
+struct QBusRoute_s; typedef struct QBusRoute_s* QBusRoute;
+
+//-----------------------------------------------------------------------------
+
+__CAPE_LIBEX   QBusRoute         qbus_route_new           (QBus qbus, const CapeString name);
+
+__CAPE_LIBEX   void              qbus_route_del           (QBusRoute*);
+
+//-----------------------------------------------------------------------------
+
+__CAPE_LIBEX   void              qbus_route_conn_reg      (QBusRoute, QBusConnection);
+
+__CAPE_LIBEX   void              qbus_route_conn_rm       (QBusRoute, QBusConnection);
+
+__CAPE_LIBEX   void              qbus_route_conn_onFrame  (QBusRoute, QBusConnection, QBusFrame*);
+
+//-----------------------------------------------------------------------------
+
+__CAPE_LIBEX   void              qbus_route_meth_reg      (QBusRoute, const char* method, void* ptr, fct_qbus_onMessage onMsg, fct_qbus_onRemoved onRm);
+
+__CAPE_LIBEX   void              qbus_route_request       (QBusRoute, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage);
+
+__CAPE_LIBEX   void              qbus_route_response      (QBusRoute, const char* module, QBusM msg);
+
+//=============================================================================
+
+#endif
