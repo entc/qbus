@@ -3,6 +3,7 @@
 // cape includes
 #include "sys/cape_socket.h"
 #include "aio/cape_aio_timer.h"
+#include "sys/cape_log.h"
 
 // qbus core
 #include "qbus_core.h"
@@ -93,7 +94,7 @@ static void __STDCALL qbus_engine_tcp_inc_onConnect (void* ptr, void* handle, co
 {
   EngineTcpInc self = ptr;
   
-  printf ("connection from %s\n", remote_addr);
+  cape_log_fmt (CAPE_LL_TRACE, "QBUS", "on connect", "new connection from %s", remote_addr);
   
   if (handle == NULL)
   {
@@ -126,7 +127,7 @@ static void __STDCALL qbus_engine_tcp_inc_onConnect (void* ptr, void* handle, co
 
 static void __STDCALL qbus_engine_tcp_inc_onAcceptDone (void* ptr)
 {
-  printf ("stopped listen\n");
+  cape_log_msg (CAPE_LL_TRACE, "QBUS", "on accept done", "stopped listen");
 }
 
 //-----------------------------------------------------------------------------

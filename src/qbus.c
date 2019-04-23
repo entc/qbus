@@ -5,9 +5,11 @@
 #include <signal.h>
 
 // cape includes
+#include "sys/cape_log.h"
 #include "sys/cape_types.h"
 #include "stc/cape_str.h"
 #include "aio/cape_aio_sock.h"
+#include "fmt/cape_args.h"
 
 // engines
 #include "../engines/tcp/engine_tcp.h"
@@ -232,14 +234,18 @@ int qbus_wait (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
   int res;
   
   // open the operating system AIO/event subsystem
-  res = cape_aio_context_open (self->aio);
-  
-  // set signal handling strategy (abort AIO if SIGINT and SIGTERM occours)
-  res = cape_aio_context_signal_map (self->aio, SIGINT, CAPE_AIO_ABORT);
-  res = cape_aio_context_signal_map (self->aio, SIGTERM, CAPE_AIO_ABORT);
+  res = cape_aio_context_open (self->aio, err);
+  if (res)
+  {
+    return res;
+  }
   
   // activate signal handling strategy
-  res = cape_aio_context_signal_set (self->aio);
+  res = cape_aio_context_set_interupts (self->aio, TRUE, TRUE, err);
+  if (res)
+  {
+    return res;
+  }
   
   if (binds)
   {
@@ -254,7 +260,7 @@ int qbus_wait (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
   // TODO: run in several threads
   
   // wait infinite and let the AIO subsystem handle all events
-  res = cape_aio_context_wait (self->aio);
+  res = cape_aio_context_wait (self->aio, err);
   
   printf ("Goodbye, have a nice day!\n");
   
@@ -342,6 +348,95 @@ void qbus_message_del (QBusM* p_self)
   cape_err_del (&(self->err));
   
   CAPE_DEL (p_self, struct QBusMessage_s);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done on_done, int argc, char *argv[])
+{
+  int res = CAPE_ERR_NONE;
+  CapeErr err = cape_err_new ();
+
+  QBus qbus = qbus_new (name);
+
+  CapeUdc bind = NULL;
+  CapeUdc remotes = NULL;
+  
+  void* user_ptr= NULL;
+  
+  printf ("    ooooooo  oooooooooo ooooo  oooo oooooooo8  \n");
+  printf ("  o888   888o 888    888 888    88 888         \n");
+  printf ("  888     888 888oooo88  888    88  888oooooo  \n");
+  printf ("  888o  8o888 888    888 888    88         888 \n");
+  printf ("    88ooo88  o888ooo888   888oo88  o88oooo888  \n");
+  printf ("         88o8                                  \n");
+  printf ("\n");
+  
+  cape_log_msg (CAPE_LL_INFO, name, "qbus_instance", "starting up");
+  
+  // convert program arguments into a node with parameters 
+  CapeUdc params = cape_args_from_args (argc, argv, NULL);
+  if (params)
+  {
+    
+    
+    
+  }
+  
+  cape_udc_del (&params);
+  
+  
+  if (argc == 3)
+  {      
+    remotes = cape_udc_new (CAPE_UDC_LIST, NULL);
+    
+    CapeUdc client = cape_udc_new (CAPE_UDC_NODE, NULL);
+    
+    cape_udc_add_s_cp (client, "type", "socket");
+    cape_udc_add_s_cp (client, "host", argv[1]);
+    cape_udc_add_n    (client, "port", strtol(argv[2], NULL, 10));
+    
+    cape_udc_add (remotes, &client);
+  }
+  else
+  {
+    bind = cape_udc_new (CAPE_UDC_NODE, NULL);
+    
+    cape_udc_add_s_cp (bind, "type", "socket");
+    cape_udc_add_s_cp (bind, "host", "127.0.0.1");
+    cape_udc_add_n    (bind, "port", 33390);
+  }
+
+  cape_log_msg (CAPE_LL_TRACE, name, "qbus_instance", "arguments parsed");
+  
+  if (on_init)
+  {
+    res = on_init (qbus, &user_ptr, err);
+  }
+
+  if (res)
+  {
+    goto exit_and_cleanup;
+  }
+  
+  cape_log_msg (CAPE_LL_TRACE, name, "qbus_instance", "start main loop");
+
+  // *** main loop ***
+  qbus_wait (qbus, bind, remotes, err);
+
+  if (on_done)
+  {
+    res = on_done (qbus, user_ptr, err);
+  }
+  
+exit_and_cleanup:
+  
+  cape_udc_del (&bind);
+  cape_udc_del (&remotes);
+  
+  qbus_del (&qbus);
+  
+  cape_err_del (&err);
 }
 
 //-----------------------------------------------------------------------------
