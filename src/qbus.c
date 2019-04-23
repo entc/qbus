@@ -2,7 +2,7 @@
 #include "qbus_route.h"
 
 // c includes
-#include <signal.h>
+#include <stdlib.h>
 
 // cape includes
 #include "sys/cape_log.h"
@@ -10,6 +10,8 @@
 #include "stc/cape_str.h"
 #include "aio/cape_aio_sock.h"
 #include "fmt/cape_args.h"
+#include "fmt/cape_json.h"
+#include "fmt/cape_tokenizer.h"
 
 // engines
 #include "../engines/tcp/engine_tcp.h"
@@ -352,6 +354,45 @@ void qbus_message_del (QBusM* p_self)
 
 //-----------------------------------------------------------------------------
 
+void qbus_check_param (CapeUdc data, const CapeUdc param)
+{
+  const CapeString h = cape_udc_s (param, NULL);
+  if (h)
+  {
+    CapeList options = cape_tokenizer_buf (h, strlen(h), ':');
+    
+    if (cape_list_size(options) == 3)
+    {
+      CapeUdc n = cape_udc_new (CAPE_UDC_NODE, NULL);
+      
+      CapeListCursor* cursor = cape_list_cursor_create (options, CAPE_DIRECTION_FORW);
+      
+      if (cape_list_cursor_next (cursor))
+      {
+        cape_udc_add_s_cp (n, "type", cape_list_node_data (cursor->node));
+      }
+      
+      if (cape_list_cursor_next (cursor))
+      {
+        cape_udc_add_s_cp (n, "host", cape_list_node_data (cursor->node));
+      }
+      
+      if (cape_list_cursor_next (cursor))
+      {
+        cape_udc_add_n (n, "port", strtol (cape_list_node_data (cursor->node), NULL, 10));
+      }
+      
+      cape_list_cursor_destroy (&cursor);
+      
+      cape_udc_add (data, &n);
+    }
+    
+    cape_list_del (&options);
+  }
+}
+
+//-----------------------------------------------------------------------------
+
 void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done on_done, int argc, char *argv[])
 {
   int res = CAPE_ERR_NONE;
@@ -372,41 +413,44 @@ void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done
   printf ("         88o8                                  \n");
   printf ("\n");
   
-  cape_log_msg (CAPE_LL_INFO, name, "qbus_instance", "starting up");
-  
   // convert program arguments into a node with parameters 
   CapeUdc params = cape_args_from_args (argc, argv, NULL);
   if (params)
   {
+    // debug
+    {
+      CapeString h = cape_json_to_s (params);
+      
+      cape_log_fmt (CAPE_LL_INFO, name, "qbus_instance", "params: %s", h);
+      
+      cape_str_del (&h);
+    }
+
+    // check for remotes
+    {
+      CapeUdc arg_r = cape_udc_get (params, "d");
+      if (arg_r)
+      {
+        remotes = cape_udc_new (CAPE_UDC_LIST, NULL);
+        
+        qbus_check_param (remotes, arg_r);
+      }
+    }
     
-    
-    
+    // check for binds
+    {
+      CapeUdc arg_b = cape_udc_get (params, "b");
+      if (arg_b)
+      {
+        bind = cape_udc_new (CAPE_UDC_LIST, NULL);
+        
+        qbus_check_param (bind, arg_b);
+      }
+    }
   }
   
   cape_udc_del (&params);
-  
-  
-  if (argc == 3)
-  {      
-    remotes = cape_udc_new (CAPE_UDC_LIST, NULL);
     
-    CapeUdc client = cape_udc_new (CAPE_UDC_NODE, NULL);
-    
-    cape_udc_add_s_cp (client, "type", "socket");
-    cape_udc_add_s_cp (client, "host", argv[1]);
-    cape_udc_add_n    (client, "port", strtol(argv[2], NULL, 10));
-    
-    cape_udc_add (remotes, &client);
-  }
-  else
-  {
-    bind = cape_udc_new (CAPE_UDC_NODE, NULL);
-    
-    cape_udc_add_s_cp (bind, "type", "socket");
-    cape_udc_add_s_cp (bind, "host", "127.0.0.1");
-    cape_udc_add_n    (bind, "port", 33390);
-  }
-
   cape_log_msg (CAPE_LL_TRACE, name, "qbus_instance", "arguments parsed");
   
   if (on_init)
