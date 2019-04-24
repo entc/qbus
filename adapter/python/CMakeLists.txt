@@ -14,6 +14,6 @@ set(ADAPTER_PYTHON_HEADERS
 )
 
 add_library             (qbus_adapter_python SHARED ${ADAPTER_PYTHON_SOURCES} ${ADAPTER_PYTHON_HEADERS})
-target_link_libraries   (qbus_adapter_python cape qbus)
+target_link_libraries   (qbus_adapter_python cape qbus ${PYTHON_LIBRARIES})
 set_target_properties   (qbus_adapter_python PROPERTIES VERSION 1.0.1 SOVERSION 1.0.1)
 
