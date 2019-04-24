@@ -397,6 +397,7 @@ void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done
 {
   int res = CAPE_ERR_NONE;
   CapeErr err = cape_err_new ();
+  CapeFileLog log = NULL;
 
   QBus qbus = qbus_new (name);
 
@@ -417,6 +418,15 @@ void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done
   CapeUdc params = cape_args_from_args (argc, argv, NULL);
   if (params)
   {
+    // filelogging
+    {
+      CapeUdc arg_l = cape_udc_get (params, "l");
+      if (arg_l)
+      {
+        log = cape_log_new (cape_udc_s (arg_l, NULL));
+      }
+    }
+    
     // debug
     {
       CapeString h = cape_json_to_s (params);
@@ -425,7 +435,7 @@ void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done
       
       cape_str_del (&h);
     }
-
+    
     // check for remotes
     {
       CapeUdc arg_r = cape_udc_get (params, "d");
@@ -481,6 +491,7 @@ exit_and_cleanup:
   qbus_del (&qbus);
   
   cape_err_del (&err);
+  cape_log_del (&log);
 }
 
 //-----------------------------------------------------------------------------
