@@ -2,45 +2,29 @@
 
 #include <stdlib.h>
 
+//-----------------------------------------------------------------------------
+
+static int __STDCALL app_on_init (QBus qbus, void** p_ptr, CapeErr err)
+{
+
+  return CAPE_ERR_NONE;
+}
+
+//-----------------------------------------------------------------------------
+
+static int __STDCALL app_on_done (QBus qbus, void* ptr, CapeErr err)
+{
+  
+  return CAPE_ERR_NONE;
+}
+
+//-----------------------------------------------------------------------------
+
 int main (int argc, char *argv[])
 {
-  CapeErr err = cape_err_new ();
+  qbus_instance ("TEST", app_on_init, app_on_done, argc, argv);
   
-  QBus qbus = qbus_new ("TEST");
-
-  {
-    CapeUdc bind = NULL;
-    CapeUdc remotes = NULL;
-    
-    if (argc == 3)
-    {      
-      remotes = cape_udc_new (CAPE_UDC_LIST, NULL);
-      
-      CapeUdc client = cape_udc_new (CAPE_UDC_NODE, NULL);
-
-      cape_udc_add_s_cp (client, "type", "socket");
-      cape_udc_add_s_cp (client, "host", argv[1]);
-      cape_udc_add_n    (client, "port", strtol(argv[2], NULL, 10));
-      
-      cape_udc_add (remotes, &client);
-    }
-    else
-    {
-      bind = cape_udc_new (CAPE_UDC_NODE, NULL);
-      
-      cape_udc_add_s_cp (bind, "type", "socket");
-      cape_udc_add_s_cp (bind, "host", "127.0.0.1");
-      cape_udc_add_n    (bind, "port", 8090);
-    }
-    
-    qbus_wait (qbus, bind, remotes, err);
-    
-    cape_udc_del (&bind);
-    cape_udc_del (&remotes);
-  }
-  
-  
-  qbus_del (&qbus);
-  
-  cape_err_del (&err);
+  return 0;
 }
+
+//-----------------------------------------------------------------------------
