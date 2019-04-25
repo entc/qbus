@@ -407,7 +407,7 @@ void qbus_check_param (CapeUdc data, const CapeUdc param)
 
 //-----------------------------------------------------------------------------
 
-void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done on_done, int argc, char *argv[])
+void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_qbus_on_done on_done, int argc, char *argv[])
 {
   int res = CAPE_ERR_NONE;
   CapeErr err = cape_err_new ();
@@ -479,7 +479,7 @@ void qbus_instance (const char* name, fct_qbus_on_init on_init, fct_qbus_on_done
   
   if (on_init)
   {
-    res = on_init (qbus, &user_ptr, err);
+    res = on_init (qbus, ptr, &user_ptr, err);
   }
 
   if (res)

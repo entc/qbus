@@ -73,12 +73,12 @@ __CAPE_LIBEX   void               qbus_message_del       (QBusM*);
 
 //-----------------------------------------------------------------------------
 
-typedef int      (__STDCALL     *fct_qbus_on_init) (QBus, void** p_ptr, CapeErr);
+typedef int      (__STDCALL     *fct_qbus_on_init) (QBus, void* ptr, void** p_ptr, CapeErr);
 typedef int      (__STDCALL     *fct_qbus_on_done) (QBus, void* ptr, CapeErr);
 
 //-----------------------------------------------------------------------------
 
-__CAPE_LIBEX   void               qbus_instance          (const char* name, fct_qbus_on_init, fct_qbus_on_done, int argc, char *argv[]);
+__CAPE_LIBEX   void               qbus_instance          (const char* name, void* ptr, fct_qbus_on_init, fct_qbus_on_done, int argc, char *argv[]);
 
 //=============================================================================
 

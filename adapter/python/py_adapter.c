@@ -268,17 +268,6 @@ PyObject* py_transform_to_pyo (CapeUdc o)
 
 //-----------------------------------------------------------------------------
 
-static PyObject* py_qbus_instance (QBusObject* self, PyObject* args, PyObject* kwds)
-{
-  PyObject* ret = Py_None;
-
-  
-  
-  return ret;
-}
-
-//-----------------------------------------------------------------------------
-
 static PyObject* py_qbus_wait (QBusObject* self, PyObject* args, PyObject* kwds)
 {
   PyObject* ret = Py_None;
@@ -472,7 +461,6 @@ exit_and_error:
 
 static PyMethodDef py_qbus_methods[] = 
 {
-  {"instance",    (PyCFunction)py_qbus_instance,    METH_VARARGS, "instance"},
   {"wait",        (PyCFunction)py_qbus_wait,        METH_VARARGS, "wait"},
   {"register",    (PyCFunction)py_qbus_register,    METH_VARARGS, "register a callback method"},
   {NULL}
@@ -504,6 +492,161 @@ static PyTypeObject QBusType =
 
 //-----------------------------------------------------------------------------
 
+typedef struct {
+  
+  PyObject* on_init;
+
+  PyObject* on_done;
+  
+  PyObject* obj;
+  
+} PyInstanceContext;
+
+//-----------------------------------------------------------------------------
+
+static int __STDCALL py_qbus_instance__on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr err)
+{
+  PyInstanceContext* ctx = ptr;
+  
+  // use the same ptr
+  *p_ptr = ctx;
+  
+  //PyObject* arglist = Py_BuildValue ("(O)", qbus);
+  PyObject* arglist = Py_BuildValue ("()");
+    
+  ctx->obj = PyEval_CallObject (ctx->on_init, arglist);
+  
+  return CAPE_ERR_NONE;
+}
+
+//-----------------------------------------------------------------------------
+
+static int __STDCALL py_qbus_instance__on_done (QBus qbus, void* ptr, CapeErr err)
+{
+  PyInstanceContext* ctx = ptr;
+
+  //PyObject* arglist = Py_BuildValue ("(O)", qbus);
+  PyObject* arglist = Py_BuildValue ("(O)", ctx->obj);
+  
+  PyObject* result = PyEval_CallObject (ctx->on_done, arglist);
+
+  Py_DECREF (ctx->on_init);
+  Py_DECREF (ctx->on_done);
+  Py_DECREF (ctx->obj);
+  
+  Py_DECREF (result);
+
+  CAPE_DEL(&ctx, PyInstanceContext);
+  
+  return CAPE_ERR_NONE;
+}
+
+//-----------------------------------------------------------------------------
+
+static PyObject* py_qbus_instance (QBusObject* self, PyObject* args, PyObject* kwds)
+{
+  PyObject* ret = Py_None;
+  
+  CapeErr err = cape_err_new ();
+  
+  PyObject* name;
+  PyObject* on_init;
+  PyObject* on_done;
+  
+  if (!PyArg_ParseTuple (args, "OOO", &name, &on_init, &on_done))
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "invalid parameters");
+    goto exit_and_error;
+  }
+  
+  if (!PyUnicode_Check (name))
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "1. parameter is not a string");
+    goto exit_and_error;
+  }
+  
+  if (!PyCallable_Check (on_init)) 
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "2. parameter is not a callback");
+    goto exit_and_error;
+  }
+  
+  if (!PyCallable_Check (on_done)) 
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "3. parameter is not a callback");
+    goto exit_and_error;
+  }
+  
+  PyObject* sys_module = PyImport_AddModule("sys");
+  if (sys_module == NULL)
+  {
+    cape_err_set (err, CAPE_ERR_RUNTIME, "can't load 'sys' module");
+    goto exit_and_error;
+  }
+  
+  PyObject* py_argv = PyObject_GetAttrString (sys_module, "argv");
+  if (py_argv == NULL)
+  {
+    cape_err_set (err, CAPE_ERR_RUNTIME, "can't get 'argv' from sys module");
+    goto exit_and_error;
+  }
+  
+  if (!PyList_Check (py_argv))
+  {
+    cape_err_set (err, CAPE_ERR_RUNTIME, "'argv' is not a list");
+    goto exit_and_error;
+  }
+  
+  Py_ssize_t i;
+  Py_ssize_t argc = PyList_Size (py_argv);
+
+  char** argv = CAPE_ALLOC (argc * sizeof(char*));
+  
+  for (i = 0; i < argc; i++)
+  {
+    PyObject* arg = PyList_GetItem (py_argv, i);
+
+    if (PyUnicode_Check (arg))
+    {
+      // this is not a copy
+      argv[i] = PyUnicode_AsUTF8 (arg);
+    }    
+  }
+  
+  {
+    PyInstanceContext* ctx = CAPE_NEW (PyInstanceContext);
+    
+    ctx->on_init = on_init;
+    ctx->on_done = on_done;
+    ctx->obj = NULL;
+    
+    qbus_instance (PyUnicode_AsUTF8 (name), ctx, py_qbus_instance__on_init, py_qbus_instance__on_done, argc, argv);
+  }
+  
+  CAPE_FREE(argv);
+
+  Py_DECREF (name);
+  
+  Py_DECREF (py_argv);
+  Py_DECREF (sys_module);
+  
+exit_and_error:
+  
+  if (cape_err_code (err))
+  {
+    PyErr_SetString(PyExc_RuntimeError, cape_err_text (err));
+    
+    // tell python an error ocoured
+    ret = NULL;
+  }
+  
+  cape_err_del (&err);
+  
+  return ret;
+}
+
+//-----------------------------------------------------------------------------
+
 struct module_state
 {
   PyObject *error;
@@ -515,7 +658,8 @@ struct module_state
 
 static PyMethodDef module_methods[] = 
 {
-  {NULL, NULL}
+  {"instance",  (PyCFunction)py_qbus_instance, METH_VARARGS, "run a QBUS instance"},
+  {NULL}
 };
 
 //-----------------------------------------------------------------------------

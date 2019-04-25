@@ -22,7 +22,7 @@ static int __STDCALL app_on_done (QBus qbus, void* ptr, CapeErr err)
 
 int main (int argc, char *argv[])
 {
-  qbus_instance ("TEST", app_on_init, app_on_done, argc, argv);
+  qbus_instance ("TEST", NULL, app_on_init, app_on_done, argc, argv);
   
   return 0;
 }
