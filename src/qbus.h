@@ -57,6 +57,16 @@ __CAPE_LIBEX   const CapeString   qbus_name              (QBus);
 
 //-----------------------------------------------------------------------------
 
+struct QBusConnection_s; typedef struct QBusConnection_s* QBusConnection;
+
+//-----------------------------------------------------------------------------
+
+__CAPE_LIBEX   QBusConnection const  qbus_find_conn      (QBus, const char* module);
+
+__CAPE_LIBEX   void               qbus_conn_request      (QBus, QBusConnection const, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage);
+
+//-----------------------------------------------------------------------------
+
 __CAPE_LIBEX   QBusM              qbus_message_new       (const CapeString key, const CapeString sender);
 
 __CAPE_LIBEX   void               qbus_message_del       (QBusM*);

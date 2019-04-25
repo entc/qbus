@@ -305,6 +305,20 @@ const CapeString qbus_name (QBus self)
 
 //-----------------------------------------------------------------------------
 
+QBusConnection const qbus_find_conn (QBus self, const char* module)
+{
+  return qbus_route_module_find (self->route, module);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_conn_request (QBus self, QBusConnection const conn, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
+{
+  qbus_route_conn_request (self->route, conn, module, method, msg, ptr, onMsg);
+}
+
+//-----------------------------------------------------------------------------
+
 QBusM qbus_message_new (const CapeString key, const CapeString sender)
 {
   QBusM self = CAPE_NEW (struct QBusMessage_s);

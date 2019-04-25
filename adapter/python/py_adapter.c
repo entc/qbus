@@ -268,6 +268,17 @@ PyObject* py_transform_to_pyo (CapeUdc o)
 
 //-----------------------------------------------------------------------------
 
+static PyObject* py_qbus_instance (QBusObject* self, PyObject* args, PyObject* kwds)
+{
+  PyObject* ret = Py_None;
+
+  
+  
+  return ret;
+}
+
+//-----------------------------------------------------------------------------
+
 static PyObject* py_qbus_wait (QBusObject* self, PyObject* args, PyObject* kwds)
 {
   PyObject* ret = Py_None;
@@ -461,6 +472,7 @@ exit_and_error:
 
 static PyMethodDef py_qbus_methods[] = 
 {
+  {"instance",    (PyCFunction)py_qbus_instance,    METH_VARARGS, "instance"},
   {"wait",        (PyCFunction)py_qbus_wait,        METH_VARARGS, "wait"},
   {"register",    (PyCFunction)py_qbus_register,    METH_VARARGS, "register a callback method"},
   {NULL}

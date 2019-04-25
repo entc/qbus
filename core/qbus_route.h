@@ -9,7 +9,6 @@
 //=============================================================================
 
 struct QBusFrame_s; typedef struct QBusFrame_s* QBusFrame;
-struct QBusConnection_s; typedef struct QBusConnection_s* QBusConnection;
 
 //=============================================================================
 
@@ -36,6 +35,12 @@ __CAPE_LIBEX   void              qbus_route_meth_reg      (QBusRoute, const char
 __CAPE_LIBEX   void              qbus_route_request       (QBusRoute, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage);
 
 __CAPE_LIBEX   void              qbus_route_response      (QBusRoute, const char* module, QBusM msg);
+
+//-----------------------------------------------------------------------------
+
+__CAPE_LIBEX   QBusConnection const  qbus_route_module_find (QBusRoute, const char* module_origin);
+
+__CAPE_LIBEX   void              qbus_route_conn_request  (QBusRoute, QBusConnection const, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg);
 
 //=============================================================================
 

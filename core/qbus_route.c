@@ -662,39 +662,46 @@ void qbus_route_no_route (QBusRoute self, const char* module, const char* method
 
 //-----------------------------------------------------------------------------
 
+void qbus_route_conn_request (QBusRoute self, QBusConnection const conn, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
+{
+  // create a new frame
+  QBusFrame frame = qbus_frame_new ();
+  
+  {
+    CapeString h = cape_str_uuid();
+    
+    // add default content
+    qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_REQ, h, module, method, self->name);
+    
+    // add message content
+    qbus_frame_set_qmsg (frame, msg);
+    
+    cape_mutex_lock (self->chain_mutex);
+    
+    {
+      QBusMethod qmeth = qbus_method_new (QBUS_METHOD_TYPE__RESPONSE, ptr, onMsg, NULL);
+      
+      cape_map_insert (self->chains, (void*)h, (void*)qmeth);
+      
+      //printf ("CHAIN ADD: %s in %p\n", h, self->chains);
+    }
+    
+    cape_mutex_unlock (self->chain_mutex);
+  }
+  
+  // finally send the frame
+  qbus_connection_send (conn, &frame);
+}
+
+//-----------------------------------------------------------------------------
+
 void qbus_route_request (QBusRoute self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
 {
   QBusConnection const conn = qbus_route_module_find (self, module);
   
   if (conn)
   {
-    // create a new frame
-    QBusFrame frame = qbus_frame_new ();
-    
-    {
-      CapeString h = cape_str_uuid();
-      
-      // add default content
-      qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_REQ, h, module, method, self->name);
-      
-      // add message content
-      qbus_frame_set_qmsg (frame, msg);
-      
-      cape_mutex_lock (self->chain_mutex);
-
-      {
-        QBusMethod qmeth = qbus_method_new (QBUS_METHOD_TYPE__RESPONSE, ptr, onMsg, NULL);
-        
-        cape_map_insert (self->chains, (void*)h, (void*)qmeth);
-        
-        //printf ("CHAIN ADD: %s in %p\n", h, self->chains);
-      }
-      
-      cape_mutex_unlock (self->chain_mutex);
-    }
-    
-    // finally send the frame
-    qbus_connection_send (conn, &frame);
+    qbus_route_conn_request (self, conn, module, method, msg, ptr, onMsg);
   }
   else
   {
