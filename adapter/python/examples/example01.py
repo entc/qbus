@@ -1,6 +1,6 @@
 import qbus
 
-def main_init():
+def main_init(qbus):
   print("init")
   
 def main_done(obj):

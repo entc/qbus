@@ -40,10 +40,28 @@ static PyObject* py_qbus_new (PyTypeObject* type, PyObject* args, PyObject* kwds
 
 //-----------------------------------------------------------------------------
 
+static PyObject* py_qbus_new_static (PyTypeObject* type, PyObject* args, PyObject* kwds)
+{
+  QBusObject* self;
+  
+  self = (QBusObject*)type->tp_alloc(type, 0);
+  
+  return (PyObject*) self;
+}
+
+//-----------------------------------------------------------------------------
+
 static void py_qbus_del (QBusObject* self)
 {
   qbus_del (&(self->qbus));
   
+  Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+//-----------------------------------------------------------------------------
+
+static void py_qbus_del_static (QBusObject* self)
+{
   Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
@@ -475,7 +493,7 @@ static PyMemberDef py_qbus_members[] =
 
 //-----------------------------------------------------------------------------
 
-static PyTypeObject QBusType = 
+static PyTypeObject QBusType_Dynamic = 
 {
   PyVarObject_HEAD_INIT(NULL, 0)
   .tp_name = "qbus.QBus",
@@ -486,6 +504,23 @@ static PyTypeObject QBusType =
   .tp_new = py_qbus_new,
   .tp_init = (initproc) NULL,
   .tp_dealloc = (destructor) py_qbus_del,
+  .tp_members = py_qbus_members,
+  .tp_methods = py_qbus_methods,
+};
+
+//-----------------------------------------------------------------------------
+
+static PyTypeObject QBusType_Static = 
+{
+  PyVarObject_HEAD_INIT(NULL, 0)
+  .tp_name = "qbus.QBus",
+  .tp_doc = "QBus objects",
+  .tp_basicsize = sizeof(QBusObject),
+  .tp_itemsize = 0,
+  .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+  .tp_new = py_qbus_new_static,
+  .tp_init = (initproc) NULL,
+  .tp_dealloc = (destructor) py_qbus_del_static,
   .tp_members = py_qbus_members,
   .tp_methods = py_qbus_methods,
 };
@@ -511,10 +546,19 @@ static int __STDCALL py_qbus_instance__on_init (QBus qbus, void* ptr, void** p_p
   // use the same ptr
   *p_ptr = ctx;
   
-  //PyObject* arglist = Py_BuildValue ("(O)", qbus);
-  PyObject* arglist = Py_BuildValue ("()");
+  PyObject* qbus_obj = NULL;
+  
+  {
+    qbus_obj = PyObject_CallFunction((PyObject*)&QBusType_Static, "");
+  }
+  
+  {
+    PyObject* arglist = Py_BuildValue ("(O)", qbus_obj);
     
-  ctx->obj = PyEval_CallObject (ctx->on_init, arglist);
+    ctx->obj = PyEval_CallObject (ctx->on_init, arglist);
+  
+    Py_DECREF(arglist);
+  }
   
   return CAPE_ERR_NONE;
 }
@@ -703,7 +747,7 @@ PyMODINIT_FUNC PyInit_qbus (void)
 {
   PyObject *m;
   
-  if (PyType_Ready(&QBusType) < 0)
+  if (PyType_Ready(&QBusType_Dynamic) < 0)
   {
     return NULL;
   }
@@ -714,9 +758,9 @@ PyMODINIT_FUNC PyInit_qbus (void)
     return NULL;
   }
     
-  Py_INCREF(&QBusType);
-  PyModule_AddObject(m, "QBus", (PyObject *) &QBusType);
-  
+  Py_INCREF(&QBusType_Dynamic);
+  PyModule_AddObject(m, "QBus", (PyObject *) &QBusType_Dynamic);
+    
   return m;
 }
 
