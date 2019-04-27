@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.4)
 
 find_package (PythonLibs COMPONENTS Interpreter Development)
 
+message (STATUS "PYTHON_INCLUDES  = ${PYTHON_INCLUDE_DIR}")
+message (STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
+
 # abstract operation-system layer
 INCLUDE_DIRECTORIES("../../../cape/src" "../../src" ${PYTHON_INCLUDE_DIR})
 
