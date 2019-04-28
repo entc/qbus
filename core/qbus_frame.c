@@ -2,6 +2,9 @@
 
 // cape includes
 #include "fmt/cape_json.h"
+#include "sys/cape_log.h"
+
+#include <stdio.h>
 
 //-----------------------------------------------------------------------------
 
@@ -152,7 +155,7 @@ void qbus_frame_set_udc (QBusFrame self, number_t msgType, CapeUdc* p_payload)
 
 //-----------------------------------------------------------------------------
 
-void qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg)
+void qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
 {
   CapeUdc payload = cape_udc_new (CAPE_UDC_NODE, NULL);
   
@@ -164,6 +167,21 @@ void qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg)
   if (qmsg->cdata)
   {
     cape_udc_add_name (payload, &(qmsg->cdata), "D");
+  }
+  
+  if (qmsg->rinfo)
+  {
+    cape_udc_add_name (payload, &(qmsg->rinfo), "I");
+  }
+  
+  if (err)
+  {
+    number_t err_code = cape_err_code (err);
+    if (err_code)
+    {
+      cape_udc_add_s_cp (payload, "err_text", cape_err_text (err));
+      cape_udc_add_n (payload, "err_code", cape_err_code (err));
+    }
   }
   
   qbus_frame_set_udc (self, QBUS_MTYPE_JSON, &payload);
@@ -255,11 +273,23 @@ QBusM qbus_frame_qin (QBusFrame self)
         // convert from raw data into json data structure
         CapeUdc payload = cape_json_from_buf (self->msg_data, self->msg_size, NULL);
         
+        // debug
+        /*
+        {
+          CapeString h = cape_json_to_s (payload);
+          
+          printf ("PAYLOAD: %s\n", h);
+          
+          cape_str_del(&h);
+        }
+        */
+        
         if (payload)
         {
           qin->clist = cape_udc_ext_list (payload, "L");
           qin->cdata = cape_udc_ext (payload, "D");
-          
+          qin->rinfo = cape_udc_ext (payload, "I");
+
           // check for errors
           {
             number_t err_code = cape_udc_get_n (payload, "err_code", 0);
@@ -275,8 +305,7 @@ QBusM qbus_frame_qin (QBusFrame self)
         }
         else
         {
-          printf ("CAN'T PARSE JSON '%s'\n", self->msg_data);
-          
+          cape_log_fmt (CAPE_LL_ERROR, "QBUS", "frame qin", "can't parse JSON: %s", self->msg_data);
         }
         
         cape_udc_del (&payload);          

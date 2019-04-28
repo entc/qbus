@@ -339,7 +339,7 @@ QBusM qbus_message_new (const CapeString key, const CapeString sender)
   // init the objects
   self->cdata = NULL;
   self->clist = NULL;
-  self->uinfo = NULL;
+  self->rinfo = NULL;
   
   self->err = NULL;
   
@@ -359,7 +359,7 @@ void qbus_message_del (QBusM* p_self)
   
   cape_udc_del (&(self->cdata));
   cape_udc_del (&(self->clist));
-  cape_udc_del (&(self->uinfo));
+  cape_udc_del (&(self->rinfo));
   
   cape_err_del (&(self->err));
   

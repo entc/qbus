@@ -28,7 +28,7 @@ __CAPE_LIBEX   void              qbus_frame_set           (QBusFrame, number_t f
 
 __CAPE_LIBEX   void              qbus_frame_set_type      (QBusFrame, number_t ftype, const char* sender);
 
-__CAPE_LIBEX   void              qbus_frame_set_qmsg      (QBusFrame, QBusM);
+__CAPE_LIBEX   void              qbus_frame_set_qmsg      (QBusFrame, QBusM, CapeErr);
 
 __CAPE_LIBEX   void              qbus_frame_set_chainkey  (QBusFrame, CapeString* p_chain_key);
 

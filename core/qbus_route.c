@@ -5,6 +5,7 @@
 // cape includes
 #include "sys/cape_types.h"
 #include "sys/cape_mutex.h"
+#include "sys/cape_log.h"
 #include "stc/cape_map.h"
 #include "fmt/cape_json.h"
 
@@ -77,7 +78,7 @@ int qbus_method_call_request (QBusMethod self, QBus qbus, QBusFrame frame, CapeE
     res = self->onMsg (qbus, self->ptr, qin, qout, err);
 
     // override the frame content with the output message (expensive)
-    qbus_frame_set_qmsg (frame, qout);
+    qbus_frame_set_qmsg (frame, qout, err);
     
     // cleanup    
     qbus_message_del (&qin);
@@ -177,9 +178,10 @@ void qbus_route_del (QBusRoute* p_self)
 
 void qbus_route_conn_reg (QBusRoute self, QBusConnection conn)
 {
-  printf ("NEW QBUS CONNECTION\n");
-  
   QBusFrame frame = qbus_frame_new ();
+
+  // log
+  cape_log_msg (CAPE_LL_TRACE, "QBUS", "conn reg", "new connection");
   
   qbus_frame_set (frame, QBUS_FRAME_TYPE_ROUTE_REQ, NULL, NULL, NULL, self->name);
   
@@ -209,7 +211,8 @@ void qbus_route_send_updates (QBusRoute self, QBusConnection conn_origin)
       {
         CapeString h = cape_json_to_s (route_nodes);
         
-        printf ("SEND ROUTE UPDATE: %s -> %s\n", h, qbus_connection_get (conn));
+        // log
+        cape_log_fmt (CAPE_LL_TRACE, "QBUS", "route update", "send route update: %s -> %s", h, qbus_connection_get (conn));
         
         cape_str_del(&h);
       }
@@ -234,9 +237,10 @@ void qbus_route_send_updates (QBusRoute self, QBusConnection conn_origin)
 
 void qbus_route_conn_rm (QBusRoute self, QBusConnection conn)
 {
-  printf ("QBUS CONNECTION DROPPED\n");
-  
   const CapeString module = qbus_connection_get (conn);
+  
+  // log
+  cape_log_msg (CAPE_LL_TRACE, "QBUS", "conn reg", "connection dropped");
   
   if (module)
   {
@@ -365,8 +369,6 @@ void qbus_route_on_msg_foward (QBusRoute self, QBusConnection conn, QBusFrame* p
 
 void qbus_route_on_msg_method (QBusRoute self, QBusConnection conn, QBusFrame* p_frame)
 {
-  //printf ("ROUTE: MESSAGE REQUEST\n");
-  
   QBusFrame frame = *p_frame;
   
   CapeString method = cape_str_cp (qbus_frame_get_method (frame));
@@ -390,20 +392,9 @@ void qbus_route_on_msg_method (QBusRoute self, QBusConnection conn, QBusFrame* p
           {
             break;
           }
-          case CAPE_ERR_NONE:   // callback returned to finish / return the chain bus message
-          {
-            qbus_frame_set_type (frame, QBUS_FRAME_TYPE_MSG_RES, self->name);
-            
-            // finally send the frame
-            qbus_connection_send (conn, p_frame);
-            
-            break;
-          }
           default:
           {
             qbus_frame_set_type (frame, QBUS_FRAME_TYPE_MSG_RES, self->name);
-            
-            qbus_frame_set_err (frame, err);
             
             // finally send the frame
             qbus_connection_send (conn, p_frame);
@@ -494,7 +485,8 @@ void qbus_route_on_msg_forward (QBusRoute self, QBusFrame* p_frame, QBusForwardD
   }
   else
   {
-    printf ("ERROR: forward message can't be returned\n");
+    // log
+    cape_log_msg (CAPE_LL_ERROR, "QBUS", "msg forward", "forward message can't be returned");
   }
   
   cape_str_del (&(qbus_fd->chain_key));
@@ -510,16 +502,12 @@ void qbus_route_on_msg_response (QBusRoute self, QBusFrame* p_frame)
 {
   QBusFrame frame = *p_frame;
   
-  //printf ("ROUTE: MESSAGE RESPONSE\n");
-  
   const CapeString chain_key = qbus_frame_get_chainkey (frame);
   
   if (chain_key)
   {
     CapeMapNode n;
    
-    //printf ("LOOK FOR KEY: %s in %p\n", chain_key, self->chains);
-    
     cape_mutex_lock (self->chain_mutex);
     
     n = cape_map_find (self->chains, (void*)chain_key);
@@ -629,7 +617,8 @@ void qbus_route_meth_reg (QBusRoute self, const char* method_origin, void* ptr, 
 
 void qbus_route_no_route (QBusRoute self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
 {
-  printf ("no route to module %s\n", module);
+  // log
+  cape_log_fmt (CAPE_LL_WARN, "QBUS", "msg forward", "no route to module %s", module);
   
   if (onMsg)
   {
@@ -674,7 +663,7 @@ void qbus_route_conn_request (QBusRoute self, QBusConnection const conn, const c
     qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_REQ, h, module, method, self->name);
     
     // add message content
-    qbus_frame_set_qmsg (frame, msg);
+    qbus_frame_set_qmsg (frame, msg, NULL);
     
     cape_mutex_lock (self->chain_mutex);
     
@@ -682,8 +671,6 @@ void qbus_route_conn_request (QBusRoute self, QBusConnection const conn, const c
       QBusMethod qmeth = qbus_method_new (QBUS_METHOD_TYPE__RESPONSE, ptr, onMsg, NULL);
       
       cape_map_insert (self->chains, (void*)h, (void*)qmeth);
-      
-      //printf ("CHAIN ADD: %s in %p\n", h, self->chains);
     }
     
     cape_mutex_unlock (self->chain_mutex);
@@ -724,7 +711,7 @@ void qbus_route_response (QBusRoute self, const char* module, QBusM msg)
     qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_RES, msg->chain_key, module, NULL, self->name);
     
     // add message content
-    qbus_frame_set_qmsg (frame, msg);
+    qbus_frame_set_qmsg (frame, msg, NULL);
     
     // finally send the frame
     qbus_connection_send (conn, &frame);

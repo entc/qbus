@@ -11,6 +11,7 @@
 // cape includes
 #include "stc/cape_udc.h"
 #include "fmt/cape_json.h"
+#include "sys/cape_log.h"
 
 //-----------------------------------------------------------------------------
 
@@ -44,7 +45,11 @@ static PyObject* py_qbus_new_static (PyTypeObject* type, PyObject* args, PyObjec
 {
   QBusObject* self;
   
+  printf ("INIT STATIC\n");
+  
   self = (QBusObject*)type->tp_alloc(type, 0);
+  
+  self->qbus = NULL;
   
   return (PyObject*) self;
 }
@@ -452,6 +457,8 @@ static PyObject* py_qbus_register (QBusObject* self, PyObject* args, PyObject* k
   
   pcd->fct = cbfct;
   
+  cape_log_fmt (CAPE_LL_TRACE, "QBUS", "py adapter", "register callback %s", PyUnicode_AsUTF8 (name));
+
   {
     int res = qbus_register (self->qbus, PyUnicode_AsUTF8 (name), pcd, onMessage, onRemoved, err);
     if (res)
@@ -510,19 +517,45 @@ static PyTypeObject QBusType_Dynamic =
 
 //-----------------------------------------------------------------------------
 
-static PyTypeObject QBusType_Static = 
-{
+static PyTypeObject QBusType_Static = {
   PyVarObject_HEAD_INIT(NULL, 0)
-  .tp_name = "qbus.QBus",
-  .tp_doc = "QBus objects",
-  .tp_basicsize = sizeof(QBusObject),
-  .tp_itemsize = 0,
-  .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-  .tp_new = py_qbus_new_static,
-  .tp_init = (initproc) NULL,
-  .tp_dealloc = (destructor) py_qbus_del_static,
-  .tp_members = py_qbus_members,
-  .tp_methods = py_qbus_methods,
+  "qbus.QBus_s",                              /*tp_name*/
+  sizeof(QBusObject),                         /*tp_basicsize*/
+  0,                                          /*tp_itemsize*/
+  (destructor)py_qbus_del_static,                 /*tp_dealloc*/
+  0,                                          /*tp_print*/
+  0,                                          /*tp_getattr*/
+  0,                                          /*tp_setattr*/
+  0,                                          /*tp_compare*/
+  0,                                          /*tp_repr*/
+  0,                                          /*tp_as_number*/
+  0,                                          /*tp_as_sequence*/
+  0,                                          /*tp_as_mapping*/
+  0,                                          /*tp_hash */
+  0,                                          /*tp_call*/
+  0,                                          /*tp_str*/
+  0,                                          /*tp_getattro*/
+  0,                                          /*tp_setattro*/
+  0,                                          /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT,                         /*tp_flags*/
+  0,                                          /*tp_doc*/
+  0,              /*tp_traverse*/
+  0,                      /*tp_clear*/
+  0,                                          /*tp_richcompare*/
+  0,                                          /*tp_weaklistoffset*/
+  0,                                          /*tp_iter*/
+  0,                                          /*tp_iternext*/
+  py_qbus_methods,                                          /*tp_methods*/
+  0,                                /*tp_members*/
+  0,                                          /*tp_getsets*/
+  0,                                          /*tp_base*/
+  0,                                          /*tp_dict*/
+  0,                                          /*tp_descr_get*/
+  0,                                          /*tp_descr_set*/
+  0,                                          /*tp_dictoffset*/
+  0,                      /*tp_init*/
+  0,                                          /*tp_alloc*/
+  py_qbus_new_static,                                 /*tp_new*/
 };
 
 //-----------------------------------------------------------------------------
@@ -546,21 +579,29 @@ static int __STDCALL py_qbus_instance__on_init (QBus qbus, void* ptr, void** p_p
   // use the same ptr
   *p_ptr = ctx;
   
-  PyObject* qbus_obj = NULL;
+  QBusObject* obj = PyObject_New (QBusObject, &QBusType_Static);
+
+  // assign object
+  obj->qbus = qbus;
   
   {
-    qbus_obj = PyObject_CallFunction((PyObject*)&QBusType_Static, "");
-  }
-  
-  {
-    PyObject* arglist = Py_BuildValue ("(O)", qbus_obj);
+    PyObject* arglist = Py_BuildValue ("(O)", obj);
     
     ctx->obj = PyEval_CallObject (ctx->on_init, arglist);
   
+    cape_log_fmt (CAPE_LL_TRACE, "QBUS", "py adapter", "return object: %p", ctx->obj);
+
     Py_DECREF(arglist);
   }
-  
-  return CAPE_ERR_NONE;
+
+  if (ctx->obj == NULL)
+  {
+    return cape_err_set (err, CAPE_ERR_RUNTIME, "runtime error");
+  }
+  else
+  {
+    return CAPE_ERR_NONE;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -569,7 +610,6 @@ static int __STDCALL py_qbus_instance__on_done (QBus qbus, void* ptr, CapeErr er
 {
   PyInstanceContext* ctx = ptr;
 
-  //PyObject* arglist = Py_BuildValue ("(O)", qbus);
   PyObject* arglist = Py_BuildValue ("(O)", ctx->obj);
   
   PyObject* result = PyEval_CallObject (ctx->on_done, arglist);
@@ -596,6 +636,9 @@ static PyObject* py_qbus_instance (QBusObject* self, PyObject* args, PyObject* k
   PyObject* name;
   PyObject* on_init;
   PyObject* on_done;
+  
+  Py_ssize_t argc;
+  const char** argv = NULL;
   
   if (!PyArg_ParseTuple (args, "OOO", &name, &on_init, &on_done))
   {
@@ -641,20 +684,23 @@ static PyObject* py_qbus_instance (QBusObject* self, PyObject* args, PyObject* k
     goto exit_and_error;
   }
   
-  Py_ssize_t i;
-  Py_ssize_t argc = PyList_Size (py_argv);
+  argc = PyList_Size (py_argv);
+  argv = CAPE_ALLOC (argc * sizeof(char*));
 
-  char** argv = CAPE_ALLOC (argc * sizeof(char*));
-  
-  for (i = 0; i < argc; i++)
+  // convert all arguments into argv
   {
-    PyObject* arg = PyList_GetItem (py_argv, i);
-
-    if (PyUnicode_Check (arg))
+    Py_ssize_t i;
+    
+    for (i = 0; i < argc; i++)
     {
-      // this is not a copy
-      argv[i] = PyUnicode_AsUTF8 (arg);
-    }    
+      PyObject* arg = PyList_GetItem (py_argv, i);
+      
+      if (PyUnicode_Check (arg))
+      {
+        // this is not a copy
+        argv[i] = PyUnicode_AsUTF8 (arg);
+      }
+    }
   }
   
   {
@@ -664,7 +710,7 @@ static PyObject* py_qbus_instance (QBusObject* self, PyObject* args, PyObject* k
     ctx->on_done = on_done;
     ctx->obj = NULL;
     
-    qbus_instance (PyUnicode_AsUTF8 (name), ctx, py_qbus_instance__on_init, py_qbus_instance__on_done, argc, argv);
+    qbus_instance (PyUnicode_AsUTF8 (name), ctx, py_qbus_instance__on_init, py_qbus_instance__on_done, argc, (char**)argv);
   }
   
   CAPE_FREE(argv);
@@ -747,20 +793,23 @@ PyMODINIT_FUNC PyInit_qbus (void)
 {
   PyObject *m;
   
-  if (PyType_Ready(&QBusType_Dynamic) < 0)
+  if (PyType_Ready (&QBusType_Dynamic) < 0)
   {
     return NULL;
   }
     
-  m = PyModule_Create(&moduledef);
+  m = PyModule_Create (&moduledef);
   if (m == NULL)
   {
     return NULL;
   }
     
   Py_INCREF(&QBusType_Dynamic);
+  Py_INCREF(&QBusType_Static);
+  
   PyModule_AddObject(m, "QBus", (PyObject *) &QBusType_Dynamic);
-    
+  PyModule_AddObject(m, "QBus_s", (PyObject *) &QBusType_Static);
+
   return m;
 }
 

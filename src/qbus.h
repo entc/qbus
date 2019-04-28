@@ -30,7 +30,7 @@ struct QBusMessage_s
   
   CapeUdc cdata;    // object as parameters
   
-  CapeUdc uinfo;
+  CapeUdc rinfo;
   
   CapeErr err;
   
