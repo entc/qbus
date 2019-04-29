@@ -1,21 +1,23 @@
 import qbus
 
 def main_get(qin):
-  printf (qin)
+  print (qin)
+
+def main_put(qin):
+  print (qin)
 
 def main_init(qbus):
-  print("init")
   
   qbus.register ("GET", main_get)
+  qbus.register ("PUT", main_put)
+    
+def main_done(qbus, obj):
   
-  return 12
+  print("done")
   
-def main_done(obj):
   print(obj)
 
 def main():
-
-  dd = qbus.QBus()
 
   qbus.instance("EXAMPLE", main_init, main_done)
 
