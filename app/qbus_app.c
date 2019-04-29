@@ -4,7 +4,7 @@
 
 //-----------------------------------------------------------------------------
 
-static int __STDCALL app_on_init (QBus qbus, void** p_ptr, CapeErr err)
+static int __STDCALL app_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr err)
 {
 
   return CAPE_ERR_NONE;

@@ -32,15 +32,15 @@ __CAPE_LIBEX   void              qbus_route_conn_onFrame  (QBusRoute, QBusConnec
 
 __CAPE_LIBEX   void              qbus_route_meth_reg      (QBusRoute, const char* method, void* ptr, fct_qbus_onMessage onMsg, fct_qbus_onRemoved onRm);
 
-__CAPE_LIBEX   void              qbus_route_request       (QBusRoute, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage);
+__CAPE_LIBEX   void              qbus_route_request       (QBusRoute, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage, int cont);
 
-__CAPE_LIBEX   void              qbus_route_response      (QBusRoute, const char* module, QBusM msg);
+__CAPE_LIBEX   void              qbus_route_response      (QBusRoute, const char* module, QBusM msg, CapeErr err);
 
 //-----------------------------------------------------------------------------
 
 __CAPE_LIBEX   QBusConnection const  qbus_route_module_find (QBusRoute, const char* module_origin);
 
-__CAPE_LIBEX   void              qbus_route_conn_request  (QBusRoute, QBusConnection const, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg);
+__CAPE_LIBEX   void              qbus_route_conn_request  (QBusRoute, QBusConnection const, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, int cont);
 
 //=============================================================================
 

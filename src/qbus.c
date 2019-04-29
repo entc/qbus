@@ -3,6 +3,7 @@
 
 // c includes
 #include <stdlib.h>
+#include <stdio.h>
 
 // cape includes
 #include "sys/cape_log.h"
@@ -110,8 +111,8 @@ void qbus_add_income_port (QBus self, CapeUdc bind)
         
         int res = qbus_engine_tcp_inc_listen (self->engine_tcp_inc, err);
         if (res)
-        {          
-          printf ("ERROR %i: %s\n", res, cape_err_text (err));
+        {
+          cape_log_fmt (CAPE_LL_ERROR, "QBUS", "add income", "error in listen: %s", cape_err_text (err));
         }
         
         cape_err_del (&err);
@@ -163,8 +164,8 @@ void qbus_add_remote_port (QBus self, CapeUdc remote)
         
         int res = qbus_engine_tcp_out_reconnect (self->engine_tcp_out, err);
         if (res)
-        {          
-          printf ("ERROR %i: %s\n", res, cape_err_text (err));
+        {
+          cape_log_fmt (CAPE_LL_ERROR, "QBUS", "add remote", "error in connect: %s", cape_err_text (err));
         }
         
         cape_err_del (&err);
@@ -264,8 +265,6 @@ int qbus_wait (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
   // wait infinite and let the AIO subsystem handle all events
   res = cape_aio_context_wait (self->aio, err);
   
-  printf ("Goodbye, have a nice day!\n");
-  
   return res;
 }
 
@@ -282,16 +281,27 @@ int qbus_register (QBus self, const char* method, void* ptr, fct_qbus_onMessage 
 
 int qbus_send (QBus self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, CapeErr err)
 {  
-  qbus_route_request (self->route, module, method, msg, ptr, onMsg);
+  qbus_route_request (self->route, module, method, msg, ptr, onMsg, FALSE);
 
   return CAPE_ERR_NONE;
 }
 
 //-----------------------------------------------------------------------------
 
+int qbus_continue (QBus self, const char* module, const char* method, QBusM qin, void** p_ptr, fct_qbus_onMessage on_msg, CapeErr err)
+{
+  qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE);
+  
+  *p_ptr = NULL;
+  
+  return CAPE_ERR_CONTINUE;
+}
+
+//-----------------------------------------------------------------------------
+
 int qbus_response (QBus self, const char* module, QBusM msg, CapeErr err)
 {
-  qbus_route_response (self->route, module, msg);
+  qbus_route_response (self->route, module, msg, NULL);
   
   return CAPE_ERR_NONE;
 }
@@ -314,7 +324,7 @@ QBusConnection const qbus_find_conn (QBus self, const char* module)
 
 void qbus_conn_request (QBus self, QBusConnection const conn, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
 {
-  qbus_route_conn_request (self->route, conn, module, method, msg, ptr, onMsg);
+  qbus_route_conn_request (self->route, conn, module, method, msg, ptr, onMsg, FALSE);
 }
 
 //-----------------------------------------------------------------------------
@@ -350,18 +360,27 @@ QBusM qbus_message_new (const CapeString key, const CapeString sender)
 
 //-----------------------------------------------------------------------------
 
+void qbus_message_clr (QBusM self)
+{
+  cape_udc_del (&(self->cdata));
+  cape_udc_del (&(self->clist));
+  
+  cape_err_del (&(self->err));
+}
+
+//-----------------------------------------------------------------------------
+
 void qbus_message_del (QBusM* p_self)
 {
   QBusM self = *p_self;
   
+  qbus_message_clr (self);
+
+  // only clear it here
+  cape_udc_del (&(self->rinfo));
+
   cape_str_del (&(self->chain_key));
   cape_str_del (&(self->sender));
-  
-  cape_udc_del (&(self->cdata));
-  cape_udc_del (&(self->clist));
-  cape_udc_del (&(self->rinfo));
-  
-  cape_err_del (&(self->err));
   
   CAPE_DEL (p_self, struct QBusMessage_s);
 }

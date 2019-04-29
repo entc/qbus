@@ -51,6 +51,8 @@ __CAPE_LIBEX   int                qbus_register          (QBus, const char* meth
 
 __CAPE_LIBEX   int                qbus_send              (QBus, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage, CapeErr);
 
+__CAPE_LIBEX   int                qbus_continue          (QBus, const char* module, const char* method, QBusM qin, void** p_ptr, fct_qbus_onMessage, CapeErr);
+
 __CAPE_LIBEX   int                qbus_response          (QBus, const char* module, QBusM msg, CapeErr);
 
 __CAPE_LIBEX   const CapeString   qbus_name              (QBus);
@@ -70,6 +72,8 @@ __CAPE_LIBEX   void               qbus_conn_request      (QBus, QBusConnection c
 __CAPE_LIBEX   QBusM              qbus_message_new       (const CapeString key, const CapeString sender);
 
 __CAPE_LIBEX   void               qbus_message_del       (QBusM*);
+
+__CAPE_LIBEX   void               qbus_message_clr       (QBusM);
 
 //-----------------------------------------------------------------------------
 
