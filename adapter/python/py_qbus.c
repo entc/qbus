@@ -260,3 +260,71 @@ exit_and_error:
 }
 
 //-----------------------------------------------------------------------------
+
+PyObject* py_object_qbus_config (PyObject_QBus* self, PyObject* args, PyObject* kwds)
+{
+  PyObject* ret = Py_None;
+  
+  CapeErr err = cape_err_new ();
+  
+  PyObject* name;
+  PyObject* default_val;
+  
+  if (!PyArg_ParseTuple (args, "OO", &name, &default_val))
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "invalid parameters");
+    goto exit_and_error;
+  }
+
+  if (!PyUnicode_Check (name))
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "1. parameter is not a string");
+    goto exit_and_error;
+  }
+  
+  if (PyUnicode_Check (default_val))
+  {
+    const CapeString h = qbus_config_s (self->qbus, PyUnicode_AsUTF8 (name), PyUnicode_AsUTF8 (default_val));
+
+    ret = PyUnicode_FromString (h);
+  }
+  else if (PyLong_Check (default_val))
+  {
+    number_t h = qbus_config_n (self->qbus, PyUnicode_AsUTF8 (name), PyLong_AsLong (default_val));
+    
+    ret = PyLong_FromLong (h);
+  }
+  else if (PyFloat_Check (default_val))
+  {
+    double h = qbus_config_f (self->qbus, PyUnicode_AsUTF8 (name), PyFloat_AsDouble (default_val));
+    
+    ret = PyFloat_FromDouble (h);
+  }
+  else if (PyBool_Check (default_val))
+  {
+    int h = qbus_config_b (self->qbus, PyUnicode_AsUTF8 (name), default_val == Py_True);
+    
+    ret = PyBool_FromLong (h);
+  }
+  else
+  {
+    cape_err_set (err, CAPE_ERR_MISSING_PARAM, "2. parameter has not supported type");
+    goto exit_and_error;    
+  }
+  
+exit_and_error:
+  
+  if (cape_err_code (err))
+  {
+    PyErr_SetString(PyExc_RuntimeError, cape_err_text (err));
+    
+    // tell python an error occoured
+    ret = NULL;
+  }
+  
+  cape_err_del (&err);
+  
+  return ret;
+}
+
+//-----------------------------------------------------------------------------
