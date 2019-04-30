@@ -8,6 +8,13 @@ def main_put(qin):
 
 def main_init(qbus):
   
+  demo1 = qbus.config ("demo1", 12)
+  demo2 = qbus.config ("demo2", "hello world");
+  demo3 = qbus.config ("demo3", True);
+  
+  print (demo1)
+  print (demo2)
+  
   qbus.register ("GET", main_get)
   qbus.register ("PUT", main_put)
     

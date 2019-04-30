@@ -36,12 +36,15 @@ PyObject*   py_object_qbus_wait       (PyObject_QBus*, PyObject* args, PyObject*
 
 PyObject*   py_object_qbus_register   (PyObject_QBus*, PyObject* args, PyObject* kwds);
 
+PyObject*   py_object_qbus_config     (PyObject_QBus*, PyObject* args, PyObject* kwds);
+
 //-----------------------------------------------------------------------------
 
 static PyMethodDef PyMethodDef_QBus [] = 
 {
   {"wait",        (PyCFunction)py_object_qbus_wait,        METH_VARARGS, "wait"},
   {"register",    (PyCFunction)py_object_qbus_register,    METH_VARARGS, "register a callback method"},
+  {"config",      (PyCFunction)py_object_qbus_config,      METH_VARARGS, "set / get config parameters"},
   {NULL}
 };
 
