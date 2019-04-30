@@ -8,7 +8,7 @@ def main_put(qin):
 
 def main_init(qbus):
   
-  qbus.register ("GET", main_get)
+  qbus.register ("bts", main_get)
   qbus.register ("PUT", main_put)
     
 def main_done(qbus, obj):
@@ -19,7 +19,7 @@ def main_done(qbus, obj):
 
 def main():
 
-  qbus.instance("EXAMPLE", main_init, main_done)
+  qbus.instance("VELE", main_init, main_done)
 
 if __name__ == "__main__":
   main()
