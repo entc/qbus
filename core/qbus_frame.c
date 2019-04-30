@@ -138,11 +138,13 @@ void qbus_frame_set_type (QBusFrame self, number_t ftype, const char* sender)
 
 //-----------------------------------------------------------------------------
 
-void qbus_frame_set_udc (QBusFrame self, number_t msgType, CapeUdc* p_payload)
+CapeUdc qbus_frame_set_udc (QBusFrame self, number_t msgType, CapeUdc* p_payload)
 {
   CapeUdc payload = *p_payload;
   
   CapeString h = cape_json_to_s (payload);
+  
+  CapeUdc rinfo = cape_udc_ext (payload, "I");
   
   // stringify
   cape_str_replace_mv (&(self->msg_data), &h);
@@ -151,11 +153,13 @@ void qbus_frame_set_udc (QBusFrame self, number_t msgType, CapeUdc* p_payload)
   self->msg_type = msgType;
 
   cape_udc_del (p_payload);
+  
+  return rinfo;
 }
 
 //-----------------------------------------------------------------------------
 
-void qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
+CapeUdc qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
 {
   CapeUdc payload = cape_udc_new (CAPE_UDC_NODE, NULL);
   
@@ -184,7 +188,7 @@ void qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
     }
   }
   
-  qbus_frame_set_udc (self, QBUS_MTYPE_JSON, &payload);
+  return qbus_frame_set_udc (self, QBUS_MTYPE_JSON, &payload);
 }
 
 //-----------------------------------------------------------------------------
@@ -278,11 +282,11 @@ QBusM qbus_frame_qin (QBusFrame self)
         {
           CapeString h = cape_json_to_s (payload);
           
-          printf ("PAYLOAD: %s\n", h);
+          printf ("RECV PAYLOAD: %s\n", h);
           
           cape_str_del(&h);
         }
-        */
+         */
         
         if (payload)
         {

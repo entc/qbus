@@ -28,15 +28,17 @@ __CAPE_LIBEX   void              qbus_frame_set           (QBusFrame, number_t f
 
 __CAPE_LIBEX   void              qbus_frame_set_type      (QBusFrame, number_t ftype, const char* sender);
 
-__CAPE_LIBEX   void              qbus_frame_set_qmsg      (QBusFrame, QBusM, CapeErr);
-
 __CAPE_LIBEX   void              qbus_frame_set_chainkey  (QBusFrame, CapeString* p_chain_key);
 
 __CAPE_LIBEX   void              qbus_frame_set_sender    (QBusFrame, CapeString* p_sender);
 
-__CAPE_LIBEX   void              qbus_frame_set_udc       (QBusFrame, number_t msgType, CapeUdc* p_payload);
-
 __CAPE_LIBEX   void              qbus_frame_set_err       (QBusFrame, CapeErr);
+
+// returns the rinfo if available
+__CAPE_LIBEX   CapeUdc           qbus_frame_set_udc       (QBusFrame, number_t msgType, CapeUdc* p_payload);
+
+// returns the rinfo if available
+__CAPE_LIBEX   CapeUdc           qbus_frame_set_qmsg      (QBusFrame, QBusM, CapeErr);
 
 //-----------------------------------------------------------------------------
 

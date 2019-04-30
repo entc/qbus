@@ -28,9 +28,13 @@ struct QBusMethod_s
   
   fct_qbus_onRemoved onRm;
   
+  // for continue
+  
   CapeString chain_key;
   
   CapeString chain_sender;
+  
+  CapeUdc rinfo;
 };
 
 typedef struct QBusMethod_s* QBusMethod;
@@ -50,6 +54,8 @@ QBusMethod qbus_method_new (int type, void* ptr, fct_qbus_onMessage onMsg, fct_q
   self->chain_key = NULL;
   self->chain_sender = NULL;
   
+  self->rinfo = NULL;
+  
   return self;
 }
 
@@ -64,15 +70,26 @@ void qbus_method_del (QBusMethod* p_self)
     self->onRm (self->ptr);
   }
   
+  if (self->rinfo)
+  {
+    cape_udc_del (&(self->rinfo));
+  }
+  
+  cape_str_del (&(self->chain_key));
+  cape_str_del (&(self->chain_sender));
+
   CAPE_DEL (p_self, struct QBusMethod_s);
 }
 
 //-----------------------------------------------------------------------------
 
-void qbus_method_continue (QBusMethod self, CapeString* p_chain_key, CapeString* p_chain_sender)
+void qbus_method_continue (QBusMethod self, CapeString* p_chain_key, CapeString* p_chain_sender, CapeUdc* p_rinfo)
 {
   cape_str_replace_mv (&(self->chain_key), p_chain_key);
   cape_str_replace_mv (&(self->chain_sender), p_chain_sender);
+  
+  self->rinfo = *p_rinfo;
+  *p_rinfo = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -112,6 +129,13 @@ int qbus_method_call_response__continue_chain (QBusMethod self, QBus qbus, QBusR
   // convert the frame content into the input message (expensive)
   QBusM qin = qbus_frame_qin (frame_original);
 
+  if (qin->rinfo == NULL)
+  {
+    // transfer ownership
+    qin->rinfo = self->rinfo;
+    self->rinfo = NULL;
+  }
+  
   // create an empty output message
   QBusM qout = qbus_message_new (NULL, NULL);
   
@@ -736,18 +760,18 @@ void qbus_route_conn_request (QBusRoute self, QBusConnection const conn, const c
     
     CapeString h = cape_str_uuid();
 
-    if (cont && msg->chain_key)
-    {
-      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "add chainkey '%s' for continue", msg->chain_key);
-
-      qbus_method_continue (qmeth, &(msg->chain_key), &(msg->sender));
-    }
-
     // add default content
     qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_REQ, h, module, method, self->name);
     
     // add message content
-    qbus_frame_set_qmsg (frame, msg, NULL);
+    msg->rinfo = qbus_frame_set_qmsg (frame, msg, NULL);
+
+    if (cont && msg->chain_key)
+    {
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "add chainkey '%s' for continue", msg->chain_key);
+      
+      qbus_method_continue (qmeth, &(msg->chain_key), &(msg->sender), &(msg->rinfo));
+    }
     
     cape_mutex_lock (self->chain_mutex);
     
