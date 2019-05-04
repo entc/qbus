@@ -178,6 +178,11 @@ CapeUdc qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
     cape_udc_add_name (payload, &(qmsg->rinfo), "I");
   }
   
+  if (qmsg->files)
+  {
+    cape_udc_add_name (payload, &(qmsg->clist), "F");
+  }
+
   if (err)
   {
     number_t err_code = cape_err_code (err);
@@ -293,6 +298,7 @@ QBusM qbus_frame_qin (QBusFrame self)
           qin->clist = cape_udc_ext_list (payload, "L");
           qin->cdata = cape_udc_ext (payload, "D");
           qin->rinfo = cape_udc_ext (payload, "I");
+          qin->files = cape_udc_ext (payload, "F");
 
           // check for errors
           {

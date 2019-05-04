@@ -358,6 +358,7 @@ QBusM qbus_message_new (const CapeString key, const CapeString sender)
   self->cdata = NULL;
   self->clist = NULL;
   self->rinfo = NULL;
+  self->files = NULL;
   
   self->err = NULL;
   
@@ -386,6 +387,7 @@ void qbus_message_del (QBusM* p_self)
 
   // only clear it here
   cape_udc_del (&(self->rinfo));
+  cape_udc_del (&(self->files));
 
   cape_str_del (&(self->chain_key));
   cape_str_del (&(self->sender));

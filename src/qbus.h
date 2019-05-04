@@ -32,6 +32,8 @@ struct QBusMessage_s
   
   CapeUdc rinfo;
   
+  CapeUdc files;    // if the content is too big, payload is stored in temporary files
+  
   CapeErr err;
   
   CapeString chain_key;  // don't change this key
