@@ -4,6 +4,8 @@
 // c includes
 #include <stdlib.h>
 #include <stdio.h>
+#include <termios.h>
+#include <unistd.h>
 
 // cape includes
 #include "sys/cape_log.h"
@@ -683,9 +685,23 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
   
   cape_log_msg (CAPE_LL_TRACE, name, "qbus_instance", "start main loop");
 
-  // *** main loop ***
-  qbus_wait (qbus, bind, remotes, err);
+  // disable console echoing
+  {
+    struct termios saved;
+    struct termios attributes;
+    
+    tcgetattr(STDIN_FILENO, &saved);
+    tcgetattr(STDIN_FILENO, &attributes);
+    
+    attributes.c_lflag &= ~ ECHO;
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &attributes);    
 
+    // *** main loop ***
+    qbus_wait (qbus, bind, remotes, err);
+    
+    tcsetattr(STDIN_FILENO, TCSANOW, &saved);
+  }
+  
   if (on_done)
   {
     res = on_done (qbus, user_ptr, err);
