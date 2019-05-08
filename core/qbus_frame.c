@@ -180,7 +180,7 @@ CapeUdc qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
   
   if (qmsg->files)
   {
-    cape_udc_add_name (payload, &(qmsg->clist), "F");
+    cape_udc_add_name (payload, &(qmsg->files), "F");
   }
 
   if (err)
