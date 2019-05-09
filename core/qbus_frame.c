@@ -293,6 +293,12 @@ QBusM qbus_frame_qin (QBusFrame self)
         }
          */
         
+        // debug
+        /*
+        fwrite (self->msg_data, self->msg_size, 1, stdout);
+        fwrite ("\n", 1, 1, stdout);
+         */
+         
         if (payload)
         {
           qin->clist = cape_udc_ext_list (payload, "L");
