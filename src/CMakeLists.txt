@@ -15,4 +15,8 @@ add_library             (qbus SHARED ${WSRV_SOURCES} ${WSRV_HEADERS})
 target_link_libraries   (qbus qbus_core qbus_engine_tcp cape)
 set_target_properties   (qbus PROPERTIES VERSION 1.0.1 SOVERSION 1.0.1)
 
-install (TARGETS qbus DESTINATION lib)
+INSTALL (TARGETS qbus DESTINATION lib)
+
+# for docker
+INSTALL (TARGETS qbus DESTINATION docker/qore/lib)
+
