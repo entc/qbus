@@ -18,5 +18,5 @@ set_target_properties   (qbus PROPERTIES VERSION 1.0.1 SOVERSION 1.0.1)
 INSTALL (TARGETS qbus DESTINATION lib)
 
 # for docker
+INSTALL (DIRECTORY DESTINATION docker/qore/bin)
 INSTALL (TARGETS qbus DESTINATION docker/qore/lib)
-
