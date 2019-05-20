@@ -1,4 +1,4 @@
-FROM scratch
+FROM base/sys:1.0.0
 
 # specify the port number the container should expose
 EXPOSE 44430
