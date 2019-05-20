@@ -4,3 +4,4 @@ FROM base/sys:1.0.0
 EXPOSE 44430
 
 ADD docker/qore/lib lib
+ADD docker/qore/bin bin
