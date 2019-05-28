@@ -1,14 +1,26 @@
 #include "qbus.h"
 #include "sys/cape_log.h"
+#include "sys/cape_file.h"
 
-#include <stdlib.h>
-#include <ncurses.h>
+#include <unistd.h>
+#include <limits.h>
+#include <errno.h>
+#include <stdio.h>
+#include <curses.h>
+#include <fcntl.h>
+#include <pty.h>
+
+//-----------------------------------------------------------------------------
 
 struct QBusCli_s
 {
   SCREEN* scr;
   
   FILE* fd;
+  
+  int stdout;
+  
+  CapeFileHandle fh;
   
 }; typedef struct QBusCli_s* QBusCli;
 
@@ -19,6 +31,22 @@ static int __STDCALL cli_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr er
   int res;
   QBusCli cli = CAPE_NEW (struct QBusCli_s);
 
+  // create a new temporary file for the output
+  cli->fh = cape_fh_new ("/tmp", "qbus_cli_log.txt");
+  
+  // open the file
+  res = cape_fh_open (cli->fh, O_TRUNC | O_CREAT | O_WRONLY, err);
+  if (res)
+  {
+    goto exit_and_cleanup;
+  }
+
+  // store the current stdout
+  cli->stdout = dup(STDOUT_FILENO);
+  
+  // reset the current stdout to the file
+  dup2((number_t)cape_fh_fd (cli->fh), STDOUT_FILENO);
+  
   cli->fd = fopen ("/dev/tty", "r+");
   
   if (cli->fd == NULL)
@@ -35,10 +63,15 @@ static int __STDCALL cli_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr er
     goto exit_and_cleanup;
   }
 
+  cape_log_msg (CAPE_LL_TRACE, "QBUS", "cli", "switched to NCURSES screen");
+
+  // set the terminal screen
   set_term (cli->scr);
 
-  cape_log_msg (CAPE_LL_TRACE, "QBUS", "cli", "switched to NCURSES screen");
+  noecho();
   
+  refresh ();
+    
   // set user pointer
   *p_ptr = cli;
   cli = NULL;
@@ -72,8 +105,13 @@ static int __STDCALL cli_on_done (QBus qbus, void* ptr, CapeErr err)
 
   fclose (cli->fd);
     
-  CAPE_DEL (&cli, struct QBusCli_s);
+  fsync(STDOUT_FILENO);
+  dup2(cli->stdout , STDOUT_FILENO);
   
+  cape_fh_del (&(cli->fh));
+
+  CAPE_DEL (&cli, struct QBusCli_s);
+    
   return CAPE_ERR_NONE;
 }
 
