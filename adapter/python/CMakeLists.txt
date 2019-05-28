@@ -24,6 +24,3 @@ target_link_libraries   (qbus_adapter_python cape qbus ${PYTHON_LIBRARIES})
 set_target_properties   (qbus_adapter_python PROPERTIES VERSION 1.0.1 SOVERSION 1.0.1)
 
 install (TARGETS qbus_adapter_python DESTINATION lib)
-
-# for docker
-INSTALL (TARGETS qbus_adapter_python DESTINATION docker/vele/mods)
