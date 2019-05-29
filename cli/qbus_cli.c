@@ -1,12 +1,14 @@
-#include "qbus.h"
+#include "qbus_cli_modules.h"
+
+// cape includes
 #include "sys/cape_log.h"
 #include "sys/cape_file.h"
 
+// c includes
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
 #include <stdio.h>
-#include <curses.h>
 #include <fcntl.h>
 #include <pty.h>
 
@@ -21,6 +23,8 @@ struct QBusCli_s
   int stdout;
   
   CapeFileHandle fh;
+  
+  QBusCliModules cli_modules;
   
 }; typedef struct QBusCli_s* QBusCli;
 
@@ -62,24 +66,25 @@ static int __STDCALL cli_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr er
     res = cape_err_lastOSError (err);
     goto exit_and_cleanup;
   }
+  
+  cli->cli_modules = qbus_cli_modules_new (qbus, cli->scr);
 
   cape_log_msg (CAPE_LL_TRACE, "QBUS", "cli", "switched to NCURSES screen");
 
   // set the terminal screen
   set_term (cli->scr);
 
-  noecho();
-  
-  refresh ();
-    
+  res = qbus_cli_modules_init (cli->cli_modules, err);
+  if (res)
+  {
+    goto exit_and_cleanup;
+  }
+      
   // set user pointer
   *p_ptr = cli;
   cli = NULL;
   
-  
-  mvprintw(0, 0, "hello ncurses");
-  
-  refresh();
+  res = CAPE_ERR_NONE;
   
 exit_and_cleanup:
 
@@ -88,7 +93,7 @@ exit_and_cleanup:
     
   }
   
-  return CAPE_ERR_NONE;
+  return res;
 }
 
 //-----------------------------------------------------------------------------
@@ -96,6 +101,9 @@ exit_and_cleanup:
 static int __STDCALL cli_on_done (QBus qbus, void* ptr, CapeErr err)
 {
   QBusCli cli = ptr;
+  
+  // cleanup GUI modules
+  qbus_cli_modules_del (&(cli->cli_modules));
   
   // return the term
   endwin ();

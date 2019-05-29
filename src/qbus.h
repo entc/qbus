@@ -59,6 +59,8 @@ __CAPE_LIBEX   int                qbus_response          (QBus, const char* modu
 
 __CAPE_LIBEX   const CapeString   qbus_name              (QBus);
 
+__CAPE_LIBEX   CapeUdc            qbus_modules           (QBus);
+
 //-----------------------------------------------------------------------------
 
 __CAPE_LIBEX   const CapeString   qbus_config_s          (QBus, const char* name, const CapeString default_val);
@@ -95,6 +97,17 @@ typedef int      (__STDCALL     *fct_qbus_on_done) (QBus, void* ptr, CapeErr);
 //-----------------------------------------------------------------------------
 
 __CAPE_LIBEX   void               qbus_instance          (const char* name, void* ptr, fct_qbus_on_init, fct_qbus_on_done, int argc, char *argv[]);
+
+
+//-----------------------------------------------------------------------------
+
+typedef void     (__STDCALL     *fct_qbus_on_route_change) (QBus, void* ptr, const CapeUdc modules);
+
+//-----------------------------------------------------------------------------
+
+__CAPE_LIBEX   void*              qbus_add_on_change     (QBus, void* ptr, fct_qbus_on_route_change);
+
+__CAPE_LIBEX   void               qbus_rm_on_change      (QBus, void* obj);
 
 //=============================================================================
 

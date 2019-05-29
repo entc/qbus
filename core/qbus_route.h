@@ -38,9 +38,19 @@ __CAPE_LIBEX   void              qbus_route_response      (QBusRoute, const char
 
 //-----------------------------------------------------------------------------
 
+__CAPE_LIBEX   CapeUdc           qbus_route_modules       (QBusRoute);
+
+//-----------------------------------------------------------------------------
+
 __CAPE_LIBEX   QBusConnection const  qbus_route_module_find (QBusRoute, const char* module_origin);
 
 __CAPE_LIBEX   void              qbus_route_conn_request  (QBusRoute, QBusConnection const, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, int cont);
+
+__CAPE_LIBEX   void*             qbus_route_add_on_change     (QBusRoute, void* ptr, fct_qbus_on_route_change);
+
+__CAPE_LIBEX   void              qbus_route_rm_on_change      (QBusRoute, void* obj);
+
+__CAPE_LIBEX   void              qbus_route_run_on_change     (QBusRoute, CapeUdc* p_modules);
 
 //=============================================================================
 

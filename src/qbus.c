@@ -325,6 +325,13 @@ const CapeString qbus_name (QBus self)
 
 //-----------------------------------------------------------------------------
 
+CapeUdc qbus_modules (QBus self)
+{
+  return qbus_route_modules (self->route);
+}
+
+//-----------------------------------------------------------------------------
+
 QBusConnection const qbus_find_conn (QBus self, const char* module)
 {
   return qbus_route_module_find (self->route, module);
@@ -719,6 +726,20 @@ exit_and_cleanup:
   
   cape_err_del (&err);
   cape_log_del (&log);
+}
+
+//-----------------------------------------------------------------------------
+
+void* qbus_add_on_change (QBus self, void* ptr, fct_qbus_on_route_change on_change)
+{
+  return qbus_route_add_on_change (self->route, ptr, on_change);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_rm_on_change (QBus self, void* obj)
+{
+  qbus_route_rm_on_change (self->route, obj);
 }
 
 //-----------------------------------------------------------------------------

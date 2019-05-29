@@ -7,10 +7,11 @@ INCLUDE_DIRECTORIES("../../cape/src" "../src")
 
 set(CLI_SOURCES
   qbus_cli.c
+  qbus_cli_modules.c
 )
 
 set(CLI_HEADERS
-
+  qbus_cli_modules.h
 )
 
 add_executable          (qbus_cli ${CLI_SOURCES})

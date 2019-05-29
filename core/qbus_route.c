@@ -210,6 +210,25 @@ int qbus_method_call_response (QBusMethod self, QBus qbus, QBusRoute route, QBus
 
 //-----------------------------------------------------------------------------
 
+struct QBusOnChangeCallback_s
+{
+  fct_qbus_on_route_change fct;
+  
+  void* ptr;
+  
+}; typedef struct QBusOnChangeCallback_s* QBusOnChangeCallback;
+
+//-----------------------------------------------------------------------------
+
+static void __STDCALL qbus_route_callbacks_on_del (void* ptr)
+{
+  QBusOnChangeCallback cc = ptr;
+  
+  CAPE_DEL(&cc, struct QBusOnChangeCallback_s);
+}
+
+//-----------------------------------------------------------------------------
+
 struct QBusRoute_s
 {
   QBus qbus;   // reference 
@@ -223,6 +242,13 @@ struct QBusRoute_s
   CapeMutex chain_mutex;
   
   QBusRouteItems route_items;  
+  
+  // for on change
+  
+  CapeList on_changes_callbacks;
+  
+  CapeMutex on_changes_mutex;
+  
 };
 
 //-----------------------------------------------------------------------------
@@ -253,6 +279,9 @@ QBusRoute qbus_route_new (QBus qbus, const CapeString name)
   
   self->route_items = qbus_route_items_new ();
   
+  self->on_changes_callbacks = cape_list_new (qbus_route_callbacks_on_del);
+  self->on_changes_mutex = cape_mutex_new ();
+  
   return self;
 }
 
@@ -269,6 +298,9 @@ void qbus_route_del (QBusRoute* p_self)
   cape_map_del (&(self->chains));
   
   qbus_route_items_del (&(self->route_items));
+  
+  cape_list_del (&(self->on_changes_callbacks));
+  cape_mutex_del (&(self->on_changes_mutex));
   
   CAPE_DEL (p_self, struct QBusRoute_s);
 }
@@ -351,6 +383,12 @@ void qbus_route_conn_rm (QBusRoute self, QBusConnection conn)
   }
   
   qbus_route_send_updates (self, conn);  
+  
+  {
+    CapeUdc modules = qbus_route_items_nodes (self->route_items);
+
+    qbus_route_run_on_change (self, &modules);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -390,6 +428,12 @@ void qbus_route_on_route_response (QBusRoute self, QBusConnection conn, QBusFram
   
   // tell the others the new nodes
   qbus_route_send_updates (self, conn);  
+
+  {
+    CapeUdc modules = qbus_route_items_nodes (self->route_items);
+    
+    qbus_route_run_on_change (self, &modules);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -403,8 +447,14 @@ void qbus_route_on_route_update (QBusRoute self, QBusConnection conn, QBusFrame 
     CapeUdc route_nodes = qbus_frame_get_udc (frame);
 
     if (route_nodes)
-    {      
+    {
       qbus_route_items_update (self->route_items, module, &route_nodes);
+    }
+
+    {
+      CapeUdc modules = qbus_route_items_nodes (self->route_items);
+      
+      qbus_route_run_on_change (self, &modules);
     }
   }
 }
@@ -824,6 +874,63 @@ void qbus_route_response (QBusRoute self, const char* module, QBusM msg, CapeErr
   {
     cape_log_fmt (CAPE_LL_ERROR, "QBUS", "route response", "no route for response '%s'", module);
   }
+}
+
+//-----------------------------------------------------------------------------
+
+CapeUdc qbus_route_modules (QBusRoute self)
+{
+  return qbus_route_items_nodes (self->route_items);
+}
+
+//-----------------------------------------------------------------------------
+
+void* qbus_route_add_on_change (QBusRoute self, void* ptr, fct_qbus_on_route_change on_change)
+{
+  cape_mutex_lock (self->on_changes_mutex);
+
+  {
+    QBusOnChangeCallback cc = CAPE_NEW (struct QBusOnChangeCallback_s);
+    
+    cc->fct = on_change;
+    cc->ptr = ptr;
+    
+    cape_list_push_back (self->on_changes_callbacks, cc);
+  }
+  
+  cape_mutex_unlock (self->on_changes_mutex);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_run_on_change (QBusRoute self, CapeUdc* p_modules)
+{
+  cape_mutex_lock (self->on_changes_mutex);
+  
+  {
+    CapeListCursor cursor; cape_list_cursor_init (self->on_changes_callbacks, &cursor, CAPE_DIRECTION_FORW);
+    
+    while (cape_list_cursor_next (&cursor))
+    {
+      QBusOnChangeCallback cc = cape_list_node_data (cursor.node);
+      
+      if (cc->fct)
+      {
+        cc->fct (self->qbus, cc->ptr, *p_modules);
+      }
+    }    
+  }
+  
+  cape_mutex_unlock (self->on_changes_mutex);
+  
+  cape_udc_del (p_modules);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_rm_on_change (QBusRoute self, void* obj)
+{
+  
 }
 
 //-----------------------------------------------------------------------------
