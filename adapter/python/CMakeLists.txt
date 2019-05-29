@@ -4,7 +4,6 @@ find_package (PythonLibs COMPONENTS Interpreter Development QUIET)
 
 IF(PYTHON_LIBRARIES)
 
-
   message (STATUS "PYTHON_INCLUDES  = ${PYTHON_INCLUDE_DIR}")
   message (STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
 
