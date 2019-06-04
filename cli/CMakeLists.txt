@@ -20,4 +20,6 @@ IF (CURSES_LIBRARIES)
   target_link_libraries   (qbus_cli qbus ${CURSES_LIBRARIES})
   set_target_properties   (qbus_cli PROPERTIES VERSION 1.0.1 SOVERSION 1.0.1)
 
+  INSTALL (TARGETS qbus_cli DESTINATION bin)
+  
 ENDIF()
