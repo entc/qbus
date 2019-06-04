@@ -242,16 +242,9 @@ void qbus_add_remote_ports (QBus self, CapeUdc remotes)
 
 //-----------------------------------------------------------------------------
 
-int qbus_wait (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
+int qbus_wait__intern (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
 {
   int res;
-  
-  // open the operating system AIO/event subsystem
-  res = cape_aio_context_open (self->aio, err);
-  if (res)
-  {
-    return res;
-  }
   
   // activate signal handling strategy
   res = cape_aio_context_set_interupts (self->aio, TRUE, TRUE, err);
@@ -276,6 +269,22 @@ int qbus_wait (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
   res = cape_aio_context_wait (self->aio, err);
   
   return res;
+}
+
+//-----------------------------------------------------------------------------
+
+int qbus_wait (QBus self, CapeUdc binds, CapeUdc remotes, CapeErr err)
+{
+  int res;
+  
+  // open the operating system AIO/event subsystem
+  res = cape_aio_context_open (self->aio, err);
+  if (res)
+  {
+    return res;
+  }
+  
+  return qbus_wait__intern (self, binds, remotes, err);
 }
 
 //-----------------------------------------------------------------------------
@@ -321,6 +330,13 @@ int qbus_response (QBus self, const char* module, QBusM msg, CapeErr err)
 const CapeString qbus_name (QBus self)
 {
   return self->name;
+}
+
+//-----------------------------------------------------------------------------
+
+CapeAioContext qbus_aio (QBus self)
+{
+  return self->aio;
 }
 
 //-----------------------------------------------------------------------------
@@ -679,6 +695,14 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
       
   cape_log_msg (CAPE_LL_TRACE, name, "qbus_instance", "arguments parsed");
   
+  // open the operating system AIO/event subsystem
+  res = cape_aio_context_open (qbus->aio, err);
+  if (res)
+  {
+    cape_log_fmt (CAPE_LL_ERROR, "QBUS", "instance", "error in initialization: %s", cape_err_text(err));    
+    goto exit_and_cleanup;
+  }
+  
   if (on_init)
   {
     res = on_init (qbus, ptr, &user_ptr, err);
@@ -686,6 +710,7 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
 
   if (res)
   {
+    cape_log_fmt (CAPE_LL_ERROR, "QBUS", "instance", "error in initialization: %s", cape_err_text(err));    
     goto exit_and_cleanup;
   }
   
@@ -706,7 +731,7 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &attributes);    
 
     // *** main loop ***
-    qbus_wait (qbus, bind, remotes, err);
+    qbus_wait__intern (qbus, bind, remotes, err);
     
     tcsetattr(STDIN_FILENO, TCSANOW, &saved);
   }

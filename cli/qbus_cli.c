@@ -3,6 +3,7 @@
 // cape includes
 #include "sys/cape_log.h"
 #include "sys/cape_file.h"
+#include <aio/cape_aio_file.h>
 
 // c includes
 #include <unistd.h>
@@ -29,6 +30,15 @@ struct QBusCli_s
 
 //-----------------------------------------------------------------------------
 
+static void __STDCALL cli_on_keypressed (void* ptr, CapeAioFileReader freader, const char* bufdat, number_t buflen)
+{
+  QBusCli cli = ptr;
+  
+  qbus_cli_modules_stdin (cli->cli_modules, bufdat, buflen);
+}
+
+//-----------------------------------------------------------------------------
+
 static int __STDCALL cli_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr err)
 {
   int res;
@@ -44,6 +54,16 @@ static int __STDCALL cli_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr er
     goto exit_and_cleanup;
   }
 
+  {
+    CapeAioFileReader fr = cape_aio_freader_new (STDIN_FILENO, cli, cli_on_keypressed);
+    
+    if (cape_aio_freader_add (&fr, qbus_aio (qbus)) == FALSE)
+    {
+      res = cape_err_lastOSError (err);
+      goto exit_and_cleanup;
+    }
+  }
+  
   // store the current stdout
   cli->stdout = dup(STDOUT_FILENO);
   
