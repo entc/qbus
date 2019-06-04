@@ -887,7 +887,7 @@ CapeUdc qbus_route_modules (QBusRoute self)
 
 void* qbus_route_add_on_change (QBusRoute self, void* ptr, fct_qbus_on_route_change on_change)
 {
-  CapeListNode ret = NULL;
+  CapeListNode n = NULL;
   
   cape_mutex_lock (self->on_changes_mutex);
 
@@ -897,12 +897,12 @@ void* qbus_route_add_on_change (QBusRoute self, void* ptr, fct_qbus_on_route_cha
     cc->fct = on_change;
     cc->ptr = ptr;
     
-    ret = cape_list_push_back (self->on_changes_callbacks, cc);
+    n = cape_list_push_back (self->on_changes_callbacks, cc);
   }
   
   cape_mutex_unlock (self->on_changes_mutex);
   
-  return ret;
+  return n;
 }
 
 //-----------------------------------------------------------------------------
