@@ -52,6 +52,8 @@ __CAPE_LIBEX   void              qbus_route_rm_on_change      (QBusRoute, void* 
 
 __CAPE_LIBEX   void              qbus_route_run_on_change     (QBusRoute, CapeUdc* p_modules);
 
+__CAPE_LIBEX   void              qbus_route_methods           (QBusRoute, const char* module, void* ptr, fct_qbus_on_methods);
+
 //=============================================================================
 
 #endif

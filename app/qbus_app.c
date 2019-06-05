@@ -4,9 +4,21 @@
 
 //-----------------------------------------------------------------------------
 
+static int __STDCALL test_method (QBus qbus, void* ptr, QBusM qin, QBusM qout, CapeErr err)
+{
+  int res;
+  
+  
+  return res;
+}
+
+//-----------------------------------------------------------------------------
+
 static int __STDCALL app_on_init (QBus qbus, void* ptr, void** p_ptr, CapeErr err)
 {
-
+  // register methods
+  qbus_register (qbus, "test_method", NULL, test_method, NULL, err);
+  
   return CAPE_ERR_NONE;
 }
 

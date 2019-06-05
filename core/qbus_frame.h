@@ -15,6 +15,7 @@
 #define QBUS_FRAME_TYPE_MSG_REQ      3
 #define QBUS_FRAME_TYPE_MSG_RES      4
 #define QBUS_FRAME_TYPE_ROUTE_UPD    5
+#define QBUS_FRAME_TYPE_METHODS      6
 
 //=============================================================================
 

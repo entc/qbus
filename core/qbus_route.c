@@ -17,6 +17,7 @@
 #define QBUS_METHOD_TYPE__REQUEST      1
 #define QBUS_METHOD_TYPE__RESPONSE     2
 #define QBUS_METHOD_TYPE__FORWARD      3
+#define QBUS_METHOD_TYPE__METHODS      4
 
 struct QBusMethod_s
 {
@@ -472,6 +473,16 @@ typedef struct
 
 //-----------------------------------------------------------------------------
 
+typedef struct
+{
+  void* ptr;
+  
+  fct_qbus_on_methods on_methods;
+
+} QBusMethodsData;
+
+//-----------------------------------------------------------------------------
+
 void qbus_route_on_msg_foward (QBusRoute self, QBusConnection conn, QBusFrame* p_frame)
 {
   QBusFrame frame = *p_frame;
@@ -644,6 +655,29 @@ void qbus_route_on_msg_forward (QBusRoute self, QBusFrame* p_frame, QBusForwardD
   CAPE_DEL(p_qbus_fd, QBusForwardData);
 }
 
+//-----------------------------------------------------------------------------
+
+void qbus_route_on_msg_methods (QBusRoute self, QBusFrame* p_frame, QBusMethodsData** p_qbus_methods)
+{
+  QBusFrame frame = *p_frame;
+
+  QBusMethodsData* qbus_methods = *p_qbus_methods;
+  
+  if (qbus_methods->on_methods)
+  {
+    CapeErr err = cape_err_new ();
+    
+    CapeUdc methods = qbus_frame_get_udc (frame);
+    
+    qbus_methods->on_methods (self->qbus, qbus_methods->ptr, methods, err);
+
+    cape_udc_del (&methods);
+    
+    cape_err_del (&err);
+  }
+  
+  CAPE_DEL(p_qbus_methods, QBusMethodsData);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -698,6 +732,14 @@ void qbus_route_on_msg_response (QBusRoute self, QBusFrame* p_frame)
           
           break;
         }
+        case QBUS_METHOD_TYPE__METHODS:
+        {
+          QBusMethodsData* qbus_methods = qmeth->ptr;
+          
+          qbus_route_on_msg_methods (self, p_frame, &qbus_methods);
+         
+          break;
+        }
       }
       
       // cleanup
@@ -707,6 +749,92 @@ void qbus_route_on_msg_response (QBusRoute self, QBusFrame* p_frame)
     {
       
       
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+CapeUdc qbus_route__generate_modules_list (QBusRoute self)
+{
+  // encode methods into list
+  CapeUdc method_list = cape_udc_new (CAPE_UDC_LIST, NULL);
+
+  // iterate through all methods
+  {
+    CapeMapCursor* cursor = cape_map_cursor_create (self->methods, CAPE_DIRECTION_FORW);
+    
+    while (cape_map_cursor_next (cursor))
+    {
+      //QBusMethod qmeth = cape_map_node_value (cursor->node);
+     
+      //CapeUdc method_node = cape_udc_new (CAPE_UDC_NODE, NULL);
+      
+      //cape_udc_add_s_cp (method_node, "name", cape_map_node_key (cursor->node));
+      
+      //cape_udc_add (method_list, &method_node);
+      
+      cape_udc_add_s_cp (method_list, NULL, cape_map_node_key (cursor->node));
+    }
+    
+    cape_map_cursor_destroy (&cursor);
+  }
+
+  return method_list;
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_on_route_methods_request (QBusRoute self, QBusConnection conn, QBusFrame* p_frame)
+{
+  QBusFrame frame = *p_frame;
+  
+  const CapeString module = qbus_frame_get_module (frame);
+  
+  // check if the message was sent to us
+  if (cape_str_equal (module, self->name))
+  {
+    // encode methods into list
+    CapeUdc method_list = qbus_route__generate_modules_list (self);
+
+    /*
+    {
+      CapeString h = cape_json_to_s (method_list);
+      
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "methods req", "send methods: %s", h);
+      
+      cape_str_del(&h);
+    }
+    */
+
+    qbus_frame_set_type (frame, QBUS_FRAME_TYPE_MSG_RES, self->name);
+    qbus_frame_set_udc (frame, QBUS_FRAME_TYPE_MSG_RES, &method_list);
+    
+    // send the frame back
+    qbus_connection_send (conn, p_frame);
+  }
+  else  // the message was not send to us -> forward it 
+  {
+    // try to find a connection which might reach the destination module
+    QBusConnection conn_forward = qbus_route_items_get (self->route_items, module);
+    if (conn_forward)
+    {
+      qbus_route_on_msg_foward (self, conn_forward, p_frame);
+    }
+    else
+    {
+      CapeErr err = cape_err_new ();
+      
+      cape_err_set_fmt (err, CAPE_ERR_NOT_FOUND, "no route to %s", module);
+      
+      qbus_frame_set_type (frame, QBUS_FRAME_TYPE_MSG_RES, self->name);
+      
+      qbus_frame_set_err (frame, err);
+      
+      cape_err_del (&err);
+      
+      // finally send the frame
+      qbus_connection_send (conn, p_frame);
     }
   }
 }
@@ -742,6 +870,11 @@ void qbus_route_conn_onFrame (QBusRoute self, QBusConnection connection, QBusFra
     case QBUS_FRAME_TYPE_MSG_RES:
     {
       qbus_route_on_msg_response (self, p_frame);
+      break;
+    }
+    case QBUS_FRAME_TYPE_METHODS:
+    {
+      qbus_route_on_route_methods_request (self, connection, p_frame);
       break;
     }
   }
@@ -941,6 +1074,58 @@ void qbus_route_rm_on_change (QBusRoute self, void* obj)
   cape_list_node_erase (self->on_changes_callbacks, ret);
   
   cape_mutex_unlock (self->on_changes_mutex);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_methods (QBusRoute self, const char* module, void* ptr, fct_qbus_on_methods on_methods)
+{
+  QBusConnection const conn = qbus_route_module_find (self, module);
+  
+  if (conn)
+  {
+    // create a new frame
+    QBusFrame frame = qbus_frame_new ();
+
+    // create a new chain key
+    CapeString chain_key = cape_str_uuid();
+
+    QBusMethodsData* qbus_methods = CAPE_NEW (QBusMethodsData);
+    
+    qbus_methods->ptr = ptr;
+    qbus_methods->on_methods = on_methods;
+    
+    cape_mutex_lock (self->chain_mutex);
+    
+    {
+      QBusMethod qmeth = qbus_method_new (QBUS_METHOD_TYPE__METHODS, qbus_methods, NULL, NULL);
+      
+      // transfer ownership of chain_key to the map
+      cape_map_insert (self->chains, (void*)chain_key, (void*)qmeth);
+    }
+    
+    cape_mutex_unlock (self->chain_mutex);
+
+    qbus_frame_set (frame, QBUS_FRAME_TYPE_METHODS, chain_key, module, NULL, self->name);
+        
+    // send the frame
+    qbus_connection_send (conn, &frame);
+  }
+  else
+  {
+    if (on_methods)
+    {
+      CapeErr err = cape_err_new ();
+
+      // set the error
+      cape_err_set_fmt (err, CAPE_ERR_NOT_FOUND, "no route to module: %s", module);
+      
+      // callback
+      on_methods (self->qbus, ptr, NULL, err);
+      
+      cape_err_del (&err);
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------

@@ -1,8 +1,10 @@
 #include "qbus_cli_modules.h"
+#include "qbus_cli_methods.h"
 
 // cape includes
 #include <fmt/cape_json.h>
 #include <sys/cape_thread.h>
+#include <stc/cape_list.h>
 
 //-----------------------------------------------------------------------------
 
@@ -20,7 +22,30 @@ struct QBusCliModules_s
   
   int menu_position;
   int menu_max;
+  
+  QBusCliMethods methods;
+  
+  CapeList modules;
 };
+
+//-----------------------------------------------------------------------------
+
+struct QBusCliModulesListNode
+{
+  CapeString module;
+    
+};
+
+//-----------------------------------------------------------------------------
+
+static void __STDCALL qbus_cli_modules__list_on_del (void* ptr)
+{
+  struct QBusCliModulesListNode* n = ptr;
+  
+  cape_str_del (&(n->module));
+  
+  CAPE_DEL (&n, struct QBusCliModulesListNode);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -40,6 +65,9 @@ QBusCliModules qbus_cli_modules_new (QBus qbus, SCREEN* screen)
   self->menu_position = 0;
   self->menu_max = 0;
   
+  self->methods = qbus_cli_methods_new (qbus, screen);
+  self->modules = cape_list_new (qbus_cli_modules__list_on_del);
+  
   return self;
 }
 
@@ -55,6 +83,9 @@ void qbus_cli_modules_del (QBusCliModules* p_self)
   
   //cape_thread_del (&(self->curses_thread));
   
+  qbus_cli_methods_del (&(self->methods));  
+  cape_list_del (&(self->modules));
+  
   CAPE_DEL(p_self, struct QBusCliModules_s);
 }
 
@@ -62,16 +93,55 @@ void qbus_cli_modules_del (QBusCliModules* p_self)
 
 void qbus_cli_modules_menu_show (QBusCliModules self)
 {
-  mvwprintw (self->modules_window, self->menu_position + 2, 2, "[");
-  mvwprintw (self->modules_window, self->menu_position + 2, 15, "]");
+  struct QBusCliModulesListNode* n = NULL;
+  
+  CapeListCursor* cursor = cape_list_cursor_create (self->modules, CAPE_DIRECTION_FORW);
+  
+  while (cape_list_cursor_next (cursor))
+  {
+    struct QBusCliModulesListNode* node = cape_list_node_data (cursor->node);
+    
+    if (cursor->position == self->menu_position)
+    {
+      n = node;
+
+      mvwprintw (self->modules_window, cursor->position + 2, 2, "[");
+      mvwprintw (self->modules_window, cursor->position + 2, 15, "]");
+
+      mvwprintw (self->modules_window, cursor->position + 2, 5, node->module);
+    }
+    else
+    {
+      mvwprintw (self->modules_window, cursor->position + 2, 5, node->module);
+    }
+  }
+  
+  cape_list_cursor_destroy (&cursor);
+  
+  //n = cape_list_position (self->modules, self->menu_position);
+  
+  wrefresh (self->modules_window);  
+  
+  if (n)
+  {
+    qbus_cli_methods_set (self->methods, n->module);
+  }
 }
 
 //-----------------------------------------------------------------------------
 
 void qbus_cli_modules_menu_clear (QBusCliModules self)
 {
-  mvwprintw (self->modules_window, self->menu_position + 2, 2, " ");
-  mvwprintw (self->modules_window, self->menu_position + 2, 15, " ");
+  wclear(self->modules_window);
+  
+  wborder(self->modules_window, '|', '|', '_', '_', ' ', ' ', '|', '|');
+  mvwprintw (self->modules_window, 0, 0, "[ modules ]");
+  
+  wrefresh (self->modules_window);  
+  
+  
+  //mvwprintw (self->modules_window, self->menu_position + 2, 2, " ");
+  //mvwprintw (self->modules_window, self->menu_position + 2, 15, " ");
 }
 
 //-----------------------------------------------------------------------------
@@ -80,24 +150,24 @@ void __STDCALL qbus_cli_modules_on_change (QBus qbus, void* ptr, const CapeUdc m
 {
   QBusCliModules self = ptr;
   
-  clear();
-  
   qbus_cli_modules_menu_clear (self);
   
-  
   self->menu_max = 0;
-  
-  wborder(self->modules_window, '|', '|', '_', '_', ' ', ' ', '|', '|');
-  mvwprintw (self->modules_window, 0, 0, "[ modules ]");
   
   //debug
   if (modules)
   {
+    cape_list_clr (self->modules);
+    
     CapeUdcCursor* cursor = cape_udc_cursor_new (modules, CAPE_DIRECTION_FORW);
 
     while (cape_udc_cursor_next (cursor))
     {
-      mvwprintw (self->modules_window, cursor->position + 2, 5, cape_udc_s (cursor->item, "[****]"));
+      struct QBusCliModulesListNode* n = CAPE_NEW(struct QBusCliModulesListNode);
+      
+      n->module = cape_str_cp (cape_udc_s (cursor->item, "[****]"));
+      
+      cape_list_push_back (self->modules, n);
       
       self->menu_max++;
     }
@@ -106,8 +176,6 @@ void __STDCALL qbus_cli_modules_on_change (QBus qbus, void* ptr, const CapeUdc m
   }
   
   qbus_cli_modules_menu_show (self);
-
-  wrefresh (self->modules_window);  
 }
 
 //-----------------------------------------------------------------------------
@@ -158,7 +226,9 @@ int qbus_cli_modules_init (QBusCliModules self, CapeErr err)
   
   //cape_thread_start (self->curses_thread, qbus_cli_modules_worker, self);
 
-  return CAPE_ERR_NONE;
+  qbus_cli_modules_menu_show (self);
+  
+  return qbus_cli_methods_init (self->methods, err);
 }
 
 //-----------------------------------------------------------------------------

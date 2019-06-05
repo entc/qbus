@@ -768,3 +768,10 @@ void qbus_rm_on_change (QBus self, void* obj)
 }
 
 //-----------------------------------------------------------------------------
+
+void qbus_methods (QBus self, const char* module, void* ptr, fct_qbus_on_methods on_methods)
+{
+  qbus_route_methods (self->route, module, ptr, on_methods);
+}
+
+//-----------------------------------------------------------------------------
