@@ -1,4 +1,5 @@
 #include "qbus_cli_methods.h"
+#include "qbus_cli_requests.h"
 
 // cape includes
 #include <fmt/cape_json.h>
@@ -16,6 +17,8 @@ struct QBusCliMethods_s
 
   int menu_position;
   int menu_max;
+  
+  QBusCliRequests requests;
   
   CapeUdc methods;
 };
@@ -35,6 +38,8 @@ QBusCliMethods qbus_cli_methods_new (QBus qbus, SCREEN* screen)
   self->menu_position = 0;
   self->menu_max = 0;
   
+  self->requests = qbus_cli_requests_new (qbus, screen);
+  
   self->methods = NULL;
   
   return self;
@@ -47,6 +52,8 @@ void qbus_cli_methods_del (QBusCliMethods* p_self)
   QBusCliMethods self = *p_self;
   
   cape_udc_del (&(self->methods));
+  
+  qbus_cli_requests_del (&(self->requests));
   
   CAPE_DEL(p_self, struct QBusCliMethods_s);
 }
@@ -75,7 +82,7 @@ int qbus_cli_methods_init (QBusCliMethods self, CapeErr err)
   
   qbus_cli_methods_clear (self); 
   
-  return CAPE_ERR_NONE;
+  return qbus_cli_requests_init (self->requests, err);
 }
 
 //-----------------------------------------------------------------------------
