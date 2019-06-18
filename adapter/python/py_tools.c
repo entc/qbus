@@ -158,14 +158,20 @@ CapeUdc py_transform_to_udc (PyObject* o)
   }
   else if (PyDict_Check (o))
   {
+    printf ("CONVERT FROM DICT\n");
+    
     ret = py_transform_to_udc_node (o);
   }
   else if (PyList_Check (o))
   {
+    printf ("CONVERT FROM LIST\n");
+
     ret = py_transform_to_udc_list (o);
   }
   else if (PyTuple_Check (o))
   {
+    printf ("CONVERT FROM TUPLE\n");
+
     ret = py_transform_to_udc_tuple (o);
   }
   else if (PySlice_Check (o))

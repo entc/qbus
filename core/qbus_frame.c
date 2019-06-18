@@ -250,7 +250,7 @@ CapeUdc qbus_frame_get_udc (QBusFrame self)
   if (self->msg_size)
   {
     // convert from raw data into json data structure
-    CapeUdc payload = cape_json_from_buf (self->msg_data, self->msg_size, NULL);
+    CapeUdc payload = cape_json_from_buf (self->msg_data, self->msg_size);
     
     if (payload)
     {
@@ -280,7 +280,7 @@ QBusM qbus_frame_qin (QBusFrame self)
       if (self->msg_size)
       {
         // convert from raw data into json data structure
-        CapeUdc payload = cape_json_from_buf (self->msg_data, self->msg_size, NULL);
+        CapeUdc payload = cape_json_from_buf (self->msg_data, self->msg_size);
         
         // debug
         /*
