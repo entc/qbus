@@ -513,7 +513,7 @@ void qbus_config_load (QBus self)
   if (self->config_file)
   {
     // try to load
-    self->config = cape_json_from_file (self->config_file, NULL, err);
+    self->config = cape_json_from_file (self->config_file, err);
   }
   
   if (self->config == NULL)
