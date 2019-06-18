@@ -38,6 +38,8 @@ struct QBus_s
   
   // config
   CapeUdc config;
+  
+  CapeString config_file;
 };
 
 //-----------------------------------------------------------------------------
@@ -56,6 +58,7 @@ QBus qbus_new (const char* module)
   self->engine_tcp_out = NULL;
   
   self->config = NULL;
+  self->config_file = NULL;
   
   return self;
 }
@@ -76,6 +79,7 @@ void qbus_del (QBus* p_self)
   qbus_route_del (&(self->route));
   
   cape_udc_del (&(self->config));
+  cape_str_del (&(self->config_file));
   
   CAPE_DEL (p_self, struct QBus_s);
 }
@@ -461,27 +465,69 @@ void qbus_check_param (CapeUdc data, const CapeUdc param)
 
 //-----------------------------------------------------------------------------
 
+void qbus_config_load__find_file (QBus self, CapeErr err)
+{
+  CapeString current_folder = cape_fs_path_current (NULL);
+  CapeString filename = cape_str_catenate_2 (self->name, ".json");
+  
+  CapeDirCursor dc = cape_dc_new (current_folder, err);
+  
+  if (dc)
+  {
+    while (cape_dc_next (dc))
+    {
+      if (cape_str_compare (filename, cape_dc_name (dc)))
+      {
+        self->config_file = cape_fs_path_current (cape_dc_name (dc));
+
+        cape_log_fmt (CAPE_LL_TRACE, self->name, "config file", "use config: %s", self->config_file);
+      }
+    }
+    
+    cape_dc_del (&dc);
+  }
+  
+  /*
+  if (self->config_file == NULL)
+  {
+    self->config_file = cape_fs_path_current (filename);
+
+    cape_log_fmt (CAPE_LL_TRACE, self->name, "config file", "create config: %s", self->config_file);      
+  }
+  */
+
+  cape_str_del (&filename);
+  cape_str_del (&current_folder);
+  
+}
+
+//-----------------------------------------------------------------------------
+
 void qbus_config_load (QBus self)
 {
-  // try to load
-  {
-    CapeString filename = cape_str_catenate_2 (self->name, ".json");
-    CapeString file = cape_fs_path_current (filename);
-    
-    CapeErr err = cape_err_new ();
-    
-    self->config = cape_json_from_file (file, NULL, err);
+  CapeErr err = cape_err_new ();
 
-    cape_err_del (&err);
-    
-    cape_str_del (&file);
-    cape_str_del (&filename);
+  // create or find the config file
+  qbus_config_load__find_file (self, err);
+  
+  if (self->config_file)
+  {
+    // try to load
+    self->config = cape_json_from_file (self->config_file, err);
   }
   
   if (self->config == NULL)
   {
     self->config = cape_udc_new (CAPE_UDC_NODE, NULL);
   }
+
+  if (cape_err_code (err))
+  {
+    // dump error text
+    cape_log_msg (CAPE_LL_ERROR, self->name, "config load", cape_err_text (err));
+  }
+  
+  cape_err_del (&err);
 }
 
 //-----------------------------------------------------------------------------
@@ -492,18 +538,16 @@ void qbus_config_save (QBus self)
   if (self->config && cape_udc_size (self->config))
   {
     int res;
-    
-    CapeString filename = cape_str_catenate_2 (self->name, ".json");
-    CapeString file = cape_fs_path_current (filename);
-    
     CapeErr err = cape_err_new ();
     
-    res = cape_json_to_file (file, self->config, err);
-  
-    cape_err_del (&err);
+    res = cape_json_to_file (self->config_file, self->config, err);
+    if (res)
+    {
+      // dump error text
+      cape_log_msg (CAPE_LL_ERROR, self->name, "config save", cape_err_text (err));      
+    }
     
-    cape_str_del (&file);
-    cape_str_del (&filename);
+    cape_err_del (&err);
   }
 }
 
