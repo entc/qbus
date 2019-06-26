@@ -90,7 +90,7 @@ __CAPE_LIBEX   QBusM              qbus_message_new       (const CapeString key, 
 
 __CAPE_LIBEX   void               qbus_message_del       (QBusM*);
 
-__CAPE_LIBEX   void               qbus_message_clr       (QBusM);
+__CAPE_LIBEX   void               qbus_message_clr       (QBusM, u_t cdata_udc_type);
 
 //-----------------------------------------------------------------------------
 

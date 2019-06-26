@@ -398,12 +398,18 @@ QBusM qbus_message_new (const CapeString key, const CapeString sender)
 
 //-----------------------------------------------------------------------------
 
-void qbus_message_clr (QBusM self)
+void qbus_message_clr (QBusM self, u_t cdata_udc_type)
 {
   cape_udc_del (&(self->cdata));
   cape_udc_del (&(self->clist));
   
   cape_err_del (&(self->err));
+  
+  if (cdata_udc_type != CAPE_UDC_UNDEFINED)
+  {
+    // we don't need a name
+    self->cdata = cape_udc_new (cdata_udc_type, NULL);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -412,7 +418,7 @@ void qbus_message_del (QBusM* p_self)
 {
   QBusM self = *p_self;
   
-  qbus_message_clr (self);
+  qbus_message_clr (self, CAPE_UDC_UNDEFINED);
 
   // only clear it here
   cape_udc_del (&(self->rinfo));
