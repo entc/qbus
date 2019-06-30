@@ -74,7 +74,7 @@ static void __STDCALL qbus_engine_tcp_inc_onSent (void* ptr, CapeAioSocket socke
 
 //-----------------------------------------------------------------------------
 
-static void __STDCALL qbus_engine_tcp_inc_onRecv (void* ptr, CapeAioSocket socket, const char* bufdat, ssize_t buflen)
+static void __STDCALL qbus_engine_tcp_inc_onRecv (void* ptr, CapeAioSocket socket, const char* bufdat, number_t buflen)
 {
   qbus_connection_onRecv (ptr, bufdat, buflen);
 }
