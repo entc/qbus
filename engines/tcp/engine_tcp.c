@@ -256,7 +256,7 @@ void __STDCALL qbus_engine_tcp_out_onSent (void* ptr, CapeAioSocket socket, void
 
 //-----------------------------------------------------------------------------
 
-void __STDCALL qbus_engine_tcp_out_onRecv (void* ptr, CapeAioSocket socket, const char* bufdat, ssize_t buflen)
+void __STDCALL qbus_engine_tcp_out_onRecv (void* ptr, CapeAioSocket socket, const char* bufdat, number_t buflen)
 {
   QBusEngineTcpOutCtx* ctx = ptr;
 
