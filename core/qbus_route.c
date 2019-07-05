@@ -123,6 +123,21 @@ int qbus_method_call_request (QBusMethod self, QBus qbus, QBusFrame frame, CapeE
 
 //-----------------------------------------------------------------------------
 
+int qbus_method_call_request__msg (QBusMethod self, QBus qbus, QBusM qin, QBusM qout, CapeErr err)
+{
+  int res = CAPE_ERR_NONE;
+  
+  if (self->onMsg)
+  {    
+    // call the original callback    
+    res = self->onMsg (qbus, self->ptr, qin, qout, err);    
+  }
+  
+  return res;
+}
+
+//-----------------------------------------------------------------------------
+
 int qbus_method_call_response__continue_chain (QBusMethod self, QBus qbus, QBusRoute route, QBusFrame frame_original, CapeErr err)
 {
   int res = CAPE_ERR_NONE;
@@ -310,15 +325,18 @@ void qbus_route_del (QBusRoute* p_self)
 
 void qbus_route_conn_reg (QBusRoute self, QBusConnection conn)
 {
-  QBusFrame frame = qbus_frame_new ();
-
   // log
   cape_log_msg (CAPE_LL_TRACE, "QBUS", "conn reg", "new connection");
   
-  qbus_frame_set (frame, QBUS_FRAME_TYPE_ROUTE_REQ, NULL, NULL, NULL, self->name);
-  
-  // finally send the frame
-  qbus_connection_send (conn, &frame);
+  // send first frame
+  {
+    QBusFrame frame = qbus_frame_new ();
+        
+    qbus_frame_set (frame, QBUS_FRAME_TYPE_ROUTE_REQ, NULL, NULL, NULL, self->name);
+    
+    // finally send the frame
+    qbus_connection_send (conn, &frame);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -969,18 +987,177 @@ void qbus_route_conn_request (QBusRoute self, QBusConnection const conn, const c
 
 //-----------------------------------------------------------------------------
 
+int qbus_route_request__find_method_and_call (QBusRoute self, const char* method_origin, QBusM msg, QBusM qout, CapeErr err)
+{
+  int res;
+  
+  // const local objects
+  CapeMapNode n;
+  QBusMethod qmeth;
+  
+  // local objects
+  CapeString method = cape_str_cp (method_origin);
+  
+  // convert into lower case
+  cape_str_to_lower (method);
+  
+  // try to find the method
+  n = cape_map_find (self->methods, method);    
+  if (n == NULL)
+  {
+    res = cape_err_set_fmt (err, CAPE_ERR_NOT_FOUND, "method [%s] not found", method);
+    goto exit_and_cleanup;
+  }
+  
+  // get the methods object
+  qmeth = cape_map_node_value (n);
+  
+  switch (qmeth->type)
+  {
+    case QBUS_METHOD_TYPE__REQUEST:
+    {
+      res = qbus_method_call_request__msg (qmeth, self->qbus, msg, qout, err);
+      break;
+    }
+    default:
+    {
+      res = cape_err_set_fmt (err, CAPE_ERR_NOT_FOUND, "method [%s] not found", method);
+      break;
+    }
+  }
+  
+exit_and_cleanup:
+  
+  cape_str_del (&method);  
+  return res;
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_request__local_chains (QBusRoute self, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
+{
+  QBusMethod qmeth = qbus_method_new (QBUS_METHOD_TYPE__RESPONSE, ptr, onMsg, NULL);
+
+  CapeString h = cape_str_uuid();
+  
+  cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "add chainkey '%s' for continue", msg->chain_key);
+  
+  qbus_method_continue (qmeth, &(msg->chain_key), &(msg->sender), &(msg->rinfo));
+  
+  cape_mutex_lock (self->chain_mutex);
+  
+  cape_map_insert (self->chains, (void*)h, (void*)qmeth);
+  
+  cape_mutex_unlock (self->chain_mutex);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_request__local_response (QBusRoute self, QBusM msg, QBusM qin, void* ptr, fct_qbus_onMessage onMsg)
+{
+  CapeErr err = cape_err_new ();
+  QBusM qout = qbus_message_new (NULL, NULL);
+  
+  int res = CAPE_ERR_NONE;
+  
+  if (onMsg)
+  {
+    res = onMsg (self->qbus, ptr, qin, qout, err);
+  }
+  
+  switch (res)
+  {
+    case CAPE_ERR_CONTINUE:
+    {
+      // don't do anything
+      break;
+    }
+    default:
+    {
+      if (res)
+      {
+        // tranfer ownership
+        qout->err = err;
+        
+        // create an empty error object
+        err = cape_err_new ();
+      }
+      
+      // send the response back
+      qbus_route_response (self, msg->sender, qout, err);
+      
+      break;
+    }
+  }
+  
+  // cleanup
+  qbus_message_del (&qout);
+  cape_err_del (&err);
+}
+
+//-----------------------------------------------------------------------------
+
+void qbus_route_request__local_request (QBusRoute self, const char* method_origin, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
+{
+  CapeErr err = cape_err_new ();
+  QBusM qout = qbus_message_new (NULL, NULL);
+  
+  int res = qbus_route_request__find_method_and_call (self, method_origin, msg, qout, err);
+  
+  switch (res)
+  {
+    case CAPE_ERR_CONTINUE:
+    {
+      // this request shall not continue and another request was created instead
+      // we need to add the callback and ptr to the chains list, for response
+      qbus_route_request__local_chains (self, msg, ptr, onMsg);
+      
+      break;
+    }
+    default:
+    {
+      if (res)
+      {
+        // tranfer ownership
+        qout->err = err;
+        
+        // create an empty error object
+        err = cape_err_new ();
+      }
+      
+      // this requests ends here, now send the results back
+      qbus_route_request__local_response (self, msg, qout, ptr, onMsg);
+      
+      break;
+    }
+  }
+  
+  // cleanup
+  qbus_message_del (&qout);
+  cape_err_del (&err);
+}
+
+//-----------------------------------------------------------------------------
+
 void qbus_route_request (QBusRoute self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, int cont)
 {
-  QBusConnection const conn = qbus_route_module_find (self, module);
-  
-  if (conn)
+  if (cape_str_compare (module, self->name))
   {
-    qbus_route_conn_request (self, conn, module, method, msg, ptr, onMsg, cont);
+    qbus_route_request__local_request (self, method, msg, ptr, onMsg);
   }
   else
   {
-    qbus_route_no_route (self, module, method, msg, ptr, onMsg);
-  }
+    QBusConnection const conn = qbus_route_module_find (self, module);
+    
+    if (conn)
+    {
+      qbus_route_conn_request (self, conn, module, method, msg, ptr, onMsg, cont);
+    }
+    else
+    {
+      qbus_route_no_route (self, module, method, msg, ptr, onMsg);
+    }
+  }  
 }
 
 //-----------------------------------------------------------------------------
