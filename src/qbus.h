@@ -22,6 +22,7 @@ __CAPE_LIBEX   int                qbus_wait              (QBus, CapeUdc bind, Ca
 
 #define QBUS_MTYPE_NONE         0
 #define QBUS_MTYPE_JSON         1
+#define QBUS_MTYPE_FILE         2
 
 struct QBusMessage_s
 {

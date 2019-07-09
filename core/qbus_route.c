@@ -1016,6 +1016,8 @@ int qbus_route_request__find_method_and_call (QBusRoute self, const char* method
   {
     case QBUS_METHOD_TYPE__REQUEST:
     {
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "call method '%s'", method_origin);
+      
       res = qbus_method_call_request__msg (qmeth, self->qbus, msg, qout, err);
       break;
     }
@@ -1062,6 +1064,8 @@ void qbus_route_request__local_response (QBusRoute self, QBusM msg, QBusM qin, v
   
   if (onMsg)
   {
+    cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "call method callback");
+    
     res = onMsg (self->qbus, ptr, qin, qout, err);
   }
   
@@ -1069,11 +1073,16 @@ void qbus_route_request__local_response (QBusRoute self, QBusM msg, QBusM qin, v
   {
     case CAPE_ERR_CONTINUE:
     {
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request callback", "call returned a continued state");
+      
       // don't do anything
       break;
     }
     default:
     {
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request callback", "call returned a terminated state");
+
+      /*
       if (res)
       {
         // tranfer ownership
@@ -1085,6 +1094,7 @@ void qbus_route_request__local_response (QBusRoute self, QBusM msg, QBusM qin, v
       
       // send the response back
       qbus_route_response (self, msg->sender, qout, err);
+      */
       
       break;
     }
@@ -1102,12 +1112,17 @@ void qbus_route_request__local_request (QBusRoute self, const char* method_origi
   CapeErr err = cape_err_new ();
   QBusM qout = qbus_message_new (NULL, NULL);
   
+  // set default message type
+  msg->mtype = QBUS_MTYPE_JSON;
+  
   int res = qbus_route_request__find_method_and_call (self, method_origin, msg, qout, err);
   
   switch (res)
   {
     case CAPE_ERR_CONTINUE:
     {
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "call returned a continued state");
+      
       // this request shall not continue and another request was created instead
       // we need to add the callback and ptr to the chains list, for response
       qbus_route_request__local_chains (self, msg, ptr, onMsg);
@@ -1116,6 +1131,8 @@ void qbus_route_request__local_request (QBusRoute self, const char* method_origi
     }
     default:
     {
+      cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "call returned a terminated state");
+      
       if (res)
       {
         // tranfer ownership
@@ -1143,6 +1160,8 @@ void qbus_route_request (QBusRoute self, const char* module, const char* method,
 {
   if (cape_str_compare (module, self->name))
   {
+    cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "execute local request on '%s'", module);
+    
     qbus_route_request__local_request (self, method, msg, ptr, onMsg);
   }
   else
@@ -1164,25 +1183,33 @@ void qbus_route_request (QBusRoute self, const char* module, const char* method,
 
 void qbus_route_response (QBusRoute self, const char* module, QBusM msg, CapeErr err)
 {
-  QBusConnection const conn = qbus_route_module_find (self, module);
-  
-  if (conn)
+  if (cape_str_compare (module, self->name))
   {
-    // create a new frame
-    QBusFrame frame = qbus_frame_new ();
-
-    // add default content
-    qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_RES, msg->chain_key, module, NULL, self->name);
+    cape_log_fmt (CAPE_LL_TRACE, "QBUS", "response", "execute local response on '%s'", module);
     
-    // add message content
-    qbus_frame_set_qmsg (frame, msg, err);
-    
-    // finally send the frame
-    qbus_connection_send (conn, &frame);
   }
   else
   {
-    cape_log_fmt (CAPE_LL_ERROR, "QBUS", "route response", "no route for response '%s'", module);
+    QBusConnection const conn = qbus_route_module_find (self, module);
+  
+    if (conn)
+    {
+      // create a new frame
+      QBusFrame frame = qbus_frame_new ();
+      
+      // add default content
+      qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_RES, msg->chain_key, module, NULL, self->name);
+      
+      // add message content
+      qbus_frame_set_qmsg (frame, msg, err);
+      
+      // finally send the frame
+      qbus_connection_send (conn, &frame);
+    }
+    else
+    {
+      cape_log_fmt (CAPE_LL_ERROR, "QBUS", "route response", "no route for response '%s'", module);
+    }
   }
 }
 
