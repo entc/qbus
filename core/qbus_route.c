@@ -1141,11 +1141,13 @@ void qbus_route_request__local_request (QBusRoute self, const char* method_origi
 
 void qbus_route_request (QBusRoute self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, int cont)
 {
+  /*
   if (cape_str_compare (module, self->name))
   {
     qbus_route_request__local_request (self, method, msg, ptr, onMsg);
   }
   else
+   */
   {
     QBusConnection const conn = qbus_route_module_find (self, module);
     
