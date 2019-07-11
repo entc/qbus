@@ -44,22 +44,24 @@ struct QBus_s
 
 //-----------------------------------------------------------------------------
 
-QBus qbus_new (const char* module)
+QBus qbus_new (const char* module_origin)
 {
   QBus self = CAPE_NEW(struct QBus_s);
 
-  self->route = qbus_route_new (self, module);
+  // create an upper name
+  self->name = cape_str_cp (module_origin);  
+  cape_str_to_upper (self->name);
+  
+  self->route = qbus_route_new (self, self->name);
   
   self->aio = cape_aio_context_new ();
-  
-  self->name = cape_str_cp (module);
   
   self->engine_tcp_inc = NULL;
   self->engine_tcp_out = NULL;
   
   self->config = NULL;
   self->config_file = NULL;
-  
+    
   return self;
 }
 
