@@ -1042,7 +1042,7 @@ void qbus_route_request__local_chains (QBusRoute self, QBusM msg, void* ptr, fct
 
   CapeString h = cape_str_uuid();
   
-  cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "add chainkey '%s' for continue", msg->chain_key);
+  cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "add chainkey '%s' for continue", h);
   
   qbus_method_continue (qmeth, &(msg->chain_key), &(msg->sender), &(msg->rinfo));
   
@@ -1113,7 +1113,7 @@ void qbus_route_request__local_request (QBusRoute self, const char* method_origi
   QBusM qout = qbus_message_new (NULL, NULL);
   
   // set default message type
-  msg->mtype = QBUS_MTYPE_JSON;
+  qout->mtype = QBUS_MTYPE_JSON;
   
   int res = qbus_route_request__find_method_and_call (self, method_origin, msg, qout, err);
   
