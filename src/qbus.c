@@ -315,18 +315,20 @@ int qbus_send (QBus self, const char* module, const char* method, QBusM msg, voi
 
 int qbus_continue (QBus self, const char* module, const char* method, QBusM qin, void** p_ptr, fct_qbus_onMessage on_msg, CapeErr err)
 {
+  int res;
+  
   if (p_ptr)
   {
-    qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE);
+    res = qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE);
 
     *p_ptr = NULL;
   }
   else
   {
-    qbus_route_request (self->route, module, method, qin, NULL, on_msg, TRUE);
+    res = qbus_route_request (self->route, module, method, qin, NULL, on_msg, TRUE);
   }
     
-  return CAPE_ERR_CONTINUE;
+  return res;
 }
 
 //-----------------------------------------------------------------------------
