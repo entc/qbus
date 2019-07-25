@@ -44,22 +44,24 @@ struct QBus_s
 
 //-----------------------------------------------------------------------------
 
-QBus qbus_new (const char* module)
+QBus qbus_new (const char* module_origin)
 {
   QBus self = CAPE_NEW(struct QBus_s);
 
-  self->route = qbus_route_new (self, module);
+  // create an upper name
+  self->name = cape_str_cp (module_origin);  
+  cape_str_to_upper (self->name);
+  
+  self->route = qbus_route_new (self, self->name);
   
   self->aio = cape_aio_context_new ();
-  
-  self->name = cape_str_cp (module);
   
   self->engine_tcp_inc = NULL;
   self->engine_tcp_out = NULL;
   
   self->config = NULL;
   self->config_file = NULL;
-  
+    
   return self;
 }
 
@@ -313,11 +315,20 @@ int qbus_send (QBus self, const char* module, const char* method, QBusM msg, voi
 
 int qbus_continue (QBus self, const char* module, const char* method, QBusM qin, void** p_ptr, fct_qbus_onMessage on_msg, CapeErr err)
 {
-  qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE);
+  int res;
   
-  *p_ptr = NULL;
-  
-  return CAPE_ERR_CONTINUE;
+  if (p_ptr)
+  {
+    res = qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE);
+
+    *p_ptr = NULL;
+  }
+  else
+  {
+    res = qbus_route_request (self->route, module, method, qin, NULL, on_msg, TRUE);
+  }
+    
+  return res;
 }
 
 //-----------------------------------------------------------------------------
