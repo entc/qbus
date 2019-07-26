@@ -1127,6 +1127,7 @@ void qbus_route_request__local_response (QBusRoute self, QBusM msg, QBusM qin, v
 
 //-----------------------------------------------------------------------------
 
+/*
 void qbus_route_request__local_request (QBusRoute self, const char* method_origin, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
 {
   CapeErr err = cape_err_new ();
@@ -1173,11 +1174,13 @@ void qbus_route_request__local_request (QBusRoute self, const char* method_origi
   qbus_message_del (&qout);
   cape_err_del (&err);
 }
-
+*/
+ 
 //-----------------------------------------------------------------------------
 
 int qbus_route_request (QBusRoute self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, int cont)
 {
+  /*
   if (cape_str_compare (module, self->name))
   {
     cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "execute local request on '%s'", module);
@@ -1187,6 +1190,7 @@ int qbus_route_request (QBusRoute self, const char* module, const char* method, 
     return CAPE_ERR_NONE;
   }
   else
+   */
   {
     QBusConnection const conn = qbus_route_module_find (self, module);
     
