@@ -47,8 +47,8 @@ void JNICALL Java_QBus_qbwait (JNIEnv* env, jobject o, jlong ptr, jstring bind, 
   const char* bind_text = (*env)->GetStringUTFChars(env, bind, 0);
   const char* remote_text = (*env)->GetStringUTFChars(env, remote, 0);
   
-  CapeUdc bind_udc = cape_json_from_s (bind_text, NULL);
-  CapeUdc remote_udc = cape_json_from_s (remote_text, NULL);
+  CapeUdc bind_udc = cape_json_from_s (bind_text);
+  CapeUdc remote_udc = cape_json_from_s (remote_text);
 
   if (bind_udc)
   {
