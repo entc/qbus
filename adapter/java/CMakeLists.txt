@@ -26,4 +26,3 @@ set_target_properties   (qbus_adapter_java PROPERTIES VERSION 1.0.1 SOVERSION 1.
 INSTALL (TARGETS qbus_adapter_java DESTINATION lib)
 
 ENDIF()
-
