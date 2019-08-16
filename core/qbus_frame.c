@@ -195,7 +195,13 @@ CapeUdc qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
     }
   }
   
-  return qbus_frame_set_udc (self, QBUS_MTYPE_JSON, &payload);
+  // correct mtype
+  if (qmsg->mtype == QBUS_MTYPE_NONE)
+  {
+    qmsg->mtype = QBUS_MTYPE_JSON;
+  }
+  
+  return qbus_frame_set_udc (self, qmsg->mtype, &payload);
 }
 
 //-----------------------------------------------------------------------------
@@ -278,6 +284,7 @@ QBusM qbus_frame_qin (QBusFrame self)
   switch (self->msg_type)
   {
     case QBUS_MTYPE_JSON:
+    case QBUS_MTYPE_FILE:
     {
       if (self->msg_size)
       {
