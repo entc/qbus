@@ -396,6 +396,7 @@ QBusM qbus_message_new (const CapeString key, const CapeString sender)
   
   // init the objects
   self->cdata = NULL;
+  self->pdata = NULL;
   self->clist = NULL;
   self->rinfo = NULL;
   self->files = NULL;
@@ -412,6 +413,7 @@ QBusM qbus_message_new (const CapeString key, const CapeString sender)
 void qbus_message_clr (QBusM self, u_t cdata_udc_type)
 {
   cape_udc_del (&(self->cdata));
+  cape_udc_del (&(self->pdata));
   cape_udc_del (&(self->clist));
   
   cape_err_del (&(self->err));

@@ -30,7 +30,9 @@ struct QBusMessage_s
 
   CapeUdc clist;    // list of all parameters
   
-  CapeUdc cdata;    // object as parameters
+  CapeUdc cdata;    // public object as parameters
+  
+  CapeUdc pdata;    // private object as parameters
   
   CapeUdc rinfo;
   
