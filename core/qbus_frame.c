@@ -173,6 +173,11 @@ CapeUdc qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
     cape_udc_add_name (payload, &(qmsg->cdata), "D");
   }
   
+  if (qmsg->pdata)
+  {
+    cape_udc_add_name (payload, &(qmsg->pdata), "P");
+  }
+  
   if (qmsg->rinfo)
   {
     cape_udc_add_name (payload, &(qmsg->rinfo), "I");
@@ -283,28 +288,12 @@ QBusM qbus_frame_qin (QBusFrame self)
       {
         // convert from raw data into json data structure
         CapeUdc payload = cape_json_from_buf (self->msg_data, self->msg_size);
-        
-        // debug
-        /*
-        {
-          CapeString h = cape_json_to_s (payload);
-          
-          printf ("RECV PAYLOAD: %s\n", h);
-          
-          cape_str_del(&h);
-        }
-         */
-        
-        // debug
-        /*
-        fwrite (self->msg_data, self->msg_size, 1, stdout);
-        fwrite ("\n", 1, 1, stdout);
-         */
-         
         if (payload)
         {
+          // extract all substructures from the payload
           qin->clist = cape_udc_ext_list (payload, "L");
           qin->cdata = cape_udc_ext (payload, "D");
+          qin->pdata = cape_udc_ext (payload, "P");
           qin->rinfo = cape_udc_ext (payload, "I");
           qin->files = cape_udc_ext (payload, "F");
 
