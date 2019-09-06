@@ -158,7 +158,7 @@ void JNICALL Java_QBus_qbregister (JNIEnv* env, jobject o, jlong ptr, jstring me
   jcd->store_Wlistener = (*env)->NewWeakGlobalRef (env, listener);
   
   jcd->clazz = (*env)->GetObjectClass(env, listener);
-  jcd->store_method = (*env)->GetMethodID(env, jcd->clazz, "onAcceptMessage", "(Ljava/lang/String;)V");
+  jcd->store_method = (*env)->GetMethodID(env, jcd->clazz, "onAcceptMessage", "(Ljava/lang/String;Ljava/lang/String;)I");
   
   int res = qbus_register (qbus, method_text, jcd, onMessage, onRemoved, err);
   if (res)
