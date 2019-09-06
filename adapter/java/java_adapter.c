@@ -10,7 +10,7 @@
 
 jlong JNICALL Java_QBus_qbnew (JNIEnv* env, jobject o, jstring name)
 {
-  const char* name_text = (*env)->GetStringUTFChars(env, name, 0);
+  const char* name_text = (*env)->GetStringUTFChars (env, name, 0);
   
   jlong java_void_ptr = (jlong)qbus_new (name_text);
     
@@ -91,28 +91,44 @@ int __STDCALL onMessage (QBus qbus, void* ptr, QBusM qin, QBusM qout, CapeErr er
 {
   JavaCallbackData* jcd = ptr;
   
-  jstring h2;
+  jstring json_in;
+  jstring json_out;
   
   if (qin->cdata)
   {
     CapeString h1 = cape_json_to_s (qin->cdata);
     
-    h2 = (*jcd->env)->NewStringUTF (jcd->env, h1);
+    json_in = (*jcd->env)->NewStringUTF (jcd->env, h1);
     
     cape_str_del (&h1);
   }
   else
   {
-    h2 = (*jcd->env)->NewStringUTF (jcd->env, "");
+    json_in = (*jcd->env)->NewStringUTF (jcd->env, "");
   }
+  
+  // create output java string
+  json_out = (*jcd->env)->NewStringUTF (jcd->env, "");
     
-  (*jcd->env)->CallVoidMethod (jcd->env, jcd->store_Wlistener, jcd->store_method, h2);
+  int res = (*jcd->env)->CallIntMethod (jcd->env, jcd->store_Wlistener, jcd->store_method, json_in, json_out);
   
-  qout->cdata = cape_udc_new (CAPE_UDC_NODE, NULL);
+  // get the output string
+  const char* json_out_cstring = (*jcd->env)->GetStringUTFChars (jcd->env, json_out, 0);
+
+  // cleanup qout
+  cape_udc_del (&(qout->cdata));
+
+  if (!cape_str_empty (json_out_cstring))
+  {
+    // set the new qout object
+    qout->cdata = cape_json_from_s (json_out_cstring);
+  }
   
-  cape_udc_add_s_cp (qout->cdata, "test", "java ist toll!");
+  // tell the garbage collector to free the strings
+  (*jcd->env)->DeleteLocalRef (jcd->env, json_out);
+  (*jcd->env)->DeleteLocalRef (jcd->env, json_in);
   
-  return CAPE_ERR_NONE;
+  return res;
 }
 
 //-----------------------------------------------------------------------------
