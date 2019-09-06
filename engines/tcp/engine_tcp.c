@@ -134,7 +134,7 @@ static void __STDCALL qbus_engine_tcp_inc_onAcceptDone (void* ptr)
 
 int qbus_engine_tcp_inc_listen (EngineTcpInc self, CapeErr err)
 {
-  void* socket_handle = cape_sock_acceptor_new (self->host, self->port, err);
+  void* socket_handle = cape_sock__tcp__srv_new (self->host, self->port, err);
   
   if (socket_handle == NULL)
   {
@@ -282,7 +282,7 @@ void __STDCALL qbus_engine_tcp_out_onDone (void* ptr, void* userdata)
 
 int qbus_engine_tcp_out_reconnect (EngineTcpOut self, CapeErr err)
 {
-  void* sock = cape_sock_reader_new (self->host, self->port, err);
+  void* sock = cape_sock__tcp__clt_new (self->host, self->port, err);
   if (sock == NULL)
   {
     return cape_err_code (err);
