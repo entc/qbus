@@ -135,7 +135,7 @@ void qbus_connection_onSent (QBusConnection self, void* userdata)
 
 //-----------------------------------------------------------------------------
 
-void qbus_connection_onRecv (QBusConnection self, const char* bufdat, ssize_t buflen)
+void qbus_connection_onRecv (QBusConnection self, const char* bufdat, number_t buflen)
 {
   number_t written = 0;    // how many bytes were processed
   

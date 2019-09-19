@@ -18,13 +18,13 @@ __CAPE_LIBEX   void              qbus_connection_del      (QBusConnection*);
 
 __CAPE_LIBEX   void              qbus_connection_onSent   (QBusConnection, void* userdata);
 
-__CAPE_LIBEX   void              qbus_connection_onRecv   (QBusConnection, const char* bufdat, ssize_t buflen);
+__CAPE_LIBEX   void              qbus_connection_onRecv   (QBusConnection, const char* bufdat, number_t buflen);
 
 __CAPE_LIBEX   void              qbus_connection_send     (QBusConnection, QBusFrame*);
 
 //-----------------------------------------------------------------------------
 
-typedef void (__STDCALL *fct_qbus_connection_send) (void* ptr1, void* ptr2, const char* bufdat, ssize_t buflen, void* userdata);
+typedef void (__STDCALL *fct_qbus_connection_send) (void* ptr1, void* ptr2, const char* bufdat, number_t buflen, void* userdata);
 typedef void (__STDCALL *fct_qbus_connection_mark) (void* ptr1, void* ptr2);
 
 __CAPE_LIBEX   void              qbus_connection_cb       (QBusConnection, void* ptr1, void* ptr2, fct_qbus_connection_send, fct_qbus_connection_mark);
