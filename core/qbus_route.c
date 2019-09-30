@@ -141,9 +141,12 @@ int qbus_method_call_request__msg (QBusMethod self, QBus qbus, QBusM qin, QBusM 
 int qbus_method_call_response__continue_chain (QBusMethod self, QBus qbus, QBusRoute route, QBusFrame frame_original, CapeErr err)
 {
   int res = CAPE_ERR_NONE;
-  
+ 
+  QBusM qout = NULL;
+  QBusM qin = NULL;
+
   // convert the frame content into the input message (expensive)
-  QBusM qin = qbus_frame_qin (frame_original);
+  qin = qbus_frame_qin (frame_original);
 
   if (qin->rinfo == NULL)
   {
@@ -153,7 +156,7 @@ int qbus_method_call_response__continue_chain (QBusMethod self, QBus qbus, QBusR
   }
   
   // create an empty output message
-  QBusM qout = qbus_message_new (NULL, NULL);
+  qout = qbus_message_new (NULL, NULL);
   
   // correct chainkey and sender
   // this is important, if another continue was used
@@ -350,13 +353,15 @@ void qbus_route_send_updates (QBusRoute self, QBusConnection conn_origin)
     
     while (cape_list_cursor_next (cursor))
     {
+      CapeUdc route_nodes;
+
       QBusConnection conn = cape_list_node_data (cursor->node);
       
       QBusFrame frame = qbus_frame_new ();
       
       qbus_frame_set (frame, QBUS_FRAME_TYPE_ROUTE_UPD, NULL, NULL, NULL, self->name);
       
-      CapeUdc route_nodes = qbus_route_items_nodes (self->route_items);
+      route_nodes = qbus_route_items_nodes (self->route_items);
       
       {
         CapeString h = cape_json_to_s (route_nodes);
@@ -421,11 +426,13 @@ QBusConnection const qbus_route_module_find (QBusRoute self, const char* module_
 
 void qbus_route_on_route_request (QBusRoute self, QBusConnection conn, QBusFrame* p_frame)
 {
+  CapeUdc route_nodes;
+
   QBusFrame frame = *p_frame;
   
   qbus_frame_set_type (frame, QBUS_FRAME_TYPE_ROUTE_RES, self->name);
     
-  CapeUdc route_nodes = qbus_route_items_nodes (self->route_items);
+  route_nodes = qbus_route_items_nodes (self->route_items);
 
   if (route_nodes)
   {
@@ -505,6 +512,8 @@ void qbus_route_on_msg_foward (QBusRoute self, QBusConnection conn, QBusFrame* p
 {
   QBusFrame frame = *p_frame;
 
+  CapeString chain_key;
+
   QBusForwardData* qbus_fd = CAPE_NEW (QBusForwardData);
   
   // create a copy of the chain key
@@ -512,7 +521,7 @@ void qbus_route_on_msg_foward (QBusRoute self, QBusConnection conn, QBusFrame* p
   qbus_fd->sender = cape_str_cp (qbus_frame_get_sender  (frame));
 
   // create a new chain key
-  CapeString chain_key = cape_str_uuid();
+  chain_key = cape_str_uuid();
   
   cape_mutex_lock (self->chain_mutex);
   
@@ -549,11 +558,12 @@ void qbus_route_on_msg_method (QBusRoute self, QBusConnection conn, QBusFrame* p
 {
   QBusFrame frame = *p_frame;
   
+  CapeMapNode n;
   CapeString method = cape_str_cp (qbus_frame_get_method (frame));
   
   cape_str_to_lower (method);
   
-  CapeMapNode n = cape_map_find (self->methods, method);    
+  n = cape_map_find (self->methods, method);    
   if (n)
   {
     QBusMethod qmeth = cape_map_node_value (n);
@@ -904,11 +914,12 @@ void qbus_route_conn_onFrame (QBusRoute self, QBusConnection connection, QBusFra
 
 void qbus_route_meth_reg (QBusRoute self, const char* method_origin, void* ptr, fct_qbus_onMessage onMsg, fct_qbus_onRemoved onRm)
 {
+  QBusMethod qmeth;
   CapeString method = cape_str_cp (method_origin);
   
   cape_str_to_lower (method);
 
-  QBusMethod qmeth = qbus_method_new (QBUS_METHOD_TYPE__REQUEST, ptr, onMsg, onRm);
+  qmeth = qbus_method_new (QBUS_METHOD_TYPE__REQUEST, ptr, onMsg, onRm);
   
   cape_map_insert (self->methods, (void*)method, (void*)qmeth);
 }
@@ -1129,13 +1140,14 @@ void qbus_route_request__local_response (QBusRoute self, QBusM msg, QBusM qin, v
 
 void qbus_route_request__local_request (QBusRoute self, const char* method_origin, QBusM msg, void* ptr, fct_qbus_onMessage onMsg)
 {
+  int res;
   CapeErr err = cape_err_new ();
   QBusM qout = qbus_message_new (NULL, NULL);
   
   // set default message type
   qout->mtype = QBUS_MTYPE_JSON;
   
-  int res = qbus_route_request__find_method_and_call (self, method_origin, msg, qout, err);
+  res = qbus_route_request__find_method_and_call (self, method_origin, msg, qout, err);
   
   switch (res)
   {
