@@ -149,7 +149,7 @@ CapeUdc qbus_frame_set_udc (QBusFrame self, number_t msgType, CapeUdc* p_payload
   // stringify
   cape_str_replace_mv (&(self->msg_data), &h);
  
-  self->msg_size = strlen (self->msg_data);
+  self->msg_size = cape_str_size (self->msg_data);
   self->msg_type = msgType;
 
   cape_udc_del (p_payload);
