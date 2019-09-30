@@ -4,8 +4,17 @@
 // c includes
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifdef __WINDOWS_OS
+
+#include <windows.h>
+
+#else
+
 #include <termios.h>
 #include <unistd.h>
+
+#endif
 
 // cape includes
 #include "sys/cape_log.h"
@@ -687,6 +696,7 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
   CapeUdc bind = NULL;
   CapeUdc remotes = NULL;
   CapeUdc params = NULL;
+  CapeUdc args = NULL;
   
   void* user_ptr= NULL;
   
@@ -705,7 +715,7 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
   params = cape_udc_new (CAPE_UDC_NODE, NULL);
   
   // convert program arguments into a node with parameters 
-  CapeUdc args = cape_args_from_args (argc, argv, NULL);
+  args = cape_args_from_args (argc, argv, NULL);
   if (args)
   {
     cape_udc_merge_mv (params, &args);  
@@ -782,6 +792,16 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
   
   cape_log_msg (CAPE_LL_TRACE, name, "qbus_instance", "start main loop");
 
+#if defined __WINDOWS_OS
+
+  // TODO: nice to have
+  {
+
+
+  }
+
+#else
+
   // disable console echoing
   {
     struct termios saved;
@@ -798,7 +818,9 @@ void qbus_instance (const char* name, void* ptr, fct_qbus_on_init on_init, fct_q
     
     tcsetattr(STDIN_FILENO, TCSANOW, &saved);
   }
-  
+
+#endif
+
   if (on_done)
   {
     res = on_done (qbus, user_ptr, err);

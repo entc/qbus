@@ -336,14 +336,14 @@ QBusM qbus_frame_qin (QBusFrame self)
 
 int qbus_frame_decode (QBusFrame self, const char* bufdat, number_t buflen, number_t* written)
 {
+  number_t posS = 0;
+  const char* posB = bufdat;
+
   if (buflen == 0)
   {
     return 0;
   }
-  
-  number_t posS = 0;
-  const char* posB = bufdat;
-  
+    
   for (; posS < buflen; posS++, posB++)
   {
     switch (self->state)
