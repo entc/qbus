@@ -10,7 +10,7 @@
 
 //-----------------------------------------------------------------------------
 
-void __STDCALL qbus_engine_tcp_send (void* ptr1, void* ptr2, const char* bufdat, ssize_t buflen, void* userdata)
+void __STDCALL qbus_engine_tcp_send (void* ptr1, void* ptr2, const char* bufdat, number_t buflen, void* userdata)
 {
   cape_aio_socket_send (ptr2, ptr1, bufdat, buflen, userdata);
 }
