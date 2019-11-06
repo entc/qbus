@@ -50,9 +50,19 @@ namespace qbus
     
     cape::Udc output (int type)
     {
+      if (m_qout == NULL)
+      {
+        throw std::runtime_error ("output can't be set");
+      }
+      
       m_qout->cdata = cape_udc_new (type, NULL);
       
       return cape::Udc (m_qout->cdata);
+    }
+    
+    void forward ()
+    {
+      cape_udc_replace_mv (&(m_qout->cdata), &(m_qin->cdata));
     }
     
     QBus qbus () { return m_qbus; }
