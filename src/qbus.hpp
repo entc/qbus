@@ -1,6 +1,9 @@
 #ifndef __QBUS__HPP__H
 #define __QBUS__HPP__H 1
 
+// STL includes
+#include <exception>
+
 // cape includes
 #include <hpp/cape_stc.hpp>
 
