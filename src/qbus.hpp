@@ -2,7 +2,7 @@
 #define __QBUS__HPP__H 1
 
 // STL includes
-#include <exception>
+#include <stdexcept>
 
 // cape includes
 #include <hpp/cape_stc.hpp>
