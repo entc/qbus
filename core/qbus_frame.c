@@ -149,7 +149,7 @@ CapeUdc qbus_frame_set_udc (QBusFrame self, number_t msgType, CapeUdc* p_payload
   // stringify
   cape_str_replace_mv (&(self->msg_data), &h);
  
-  self->msg_size = strlen (self->msg_data);
+  self->msg_size = cape_str_size (self->msg_data);
   self->msg_type = msgType;
 
   cape_udc_del (p_payload);
@@ -336,14 +336,14 @@ QBusM qbus_frame_qin (QBusFrame self)
 
 int qbus_frame_decode (QBusFrame self, const char* bufdat, number_t buflen, number_t* written)
 {
+  number_t posS = 0;
+  const char* posB = bufdat;
+
   if (buflen == 0)
   {
     return 0;
   }
-  
-  number_t posS = 0;
-  const char* posB = bufdat;
-  
+    
   for (; posS < buflen; posS++, posB++)
   {
     switch (self->state)
