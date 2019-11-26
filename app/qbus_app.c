@@ -8,6 +8,7 @@ static int __STDCALL test_method (QBus qbus, void* ptr, QBusM qin, QBusM qout, C
 {
   int res;
   
+  res = CAPE_ERR_NONE;
   
   return res;
 }

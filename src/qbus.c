@@ -315,7 +315,7 @@ int qbus_register (QBus self, const char* method, void* ptr, fct_qbus_onMessage 
 
 int qbus_send (QBus self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, CapeErr err)
 {  
-  qbus_route_request (self->route, module, method, msg, ptr, onMsg, FALSE);
+  qbus_route_request (self->route, module, method, msg, ptr, onMsg, FALSE, err);
 
   return CAPE_ERR_NONE;
 }
@@ -341,13 +341,13 @@ int qbus_continue (QBus self, const char* module, const char* method, QBusM qin,
   
   if (p_ptr)
   {
-    res = qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE);
+    res = qbus_route_request (self->route, module, method, qin, *p_ptr, on_msg, TRUE, err);
 
     *p_ptr = NULL;
   }
   else
   {
-    res = qbus_route_request (self->route, module, method, qin, NULL, on_msg, TRUE);
+    res = qbus_route_request (self->route, module, method, qin, NULL, on_msg, TRUE, err);
   }
     
   return res;
