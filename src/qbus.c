@@ -322,6 +322,19 @@ int qbus_send (QBus self, const char* module, const char* method, QBusM msg, voi
 
 //-----------------------------------------------------------------------------
 
+int qbus_test_s (QBus self, const char* module, const char* method, CapeErr err)
+{  
+    /*
+  QBusM message = qbus_message_new(NULL, NULL);
+  message->cdata = cape_json_from_s(request);
+  qbus_route_request (self->route, module, method, message, ptr, onMsg, FALSE);
+  */
+
+  return CAPE_ERR_NONE;
+}
+
+//-----------------------------------------------------------------------------
+
 int qbus_continue (QBus self, const char* module, const char* method, QBusM qin, void** p_ptr, fct_qbus_onMessage on_msg, CapeErr err)
 {
   int res;

@@ -109,12 +109,14 @@ int __STDCALL onMessage (QBus qbus, void* ptr, QBusM qin, QBusM qout, CapeErr er
   
   // create output java string
   json_out = (*jcd->env)->NewStringUTF (jcd->env, "");
-    
+  
   int res = (*jcd->env)->CallIntMethod (jcd->env, jcd->store_Wlistener, jcd->store_method, json_in, json_out);
   
   // get the output string
   const char* json_out_cstring = (*jcd->env)->GetStringUTFChars (jcd->env, json_out, 0);
 
+  printf ("CALLBACK OUTPUT STRING: %s\n", json_out_cstring);
+  
   // cleanup qout
   cape_udc_del (&(qout->cdata));
 
@@ -172,9 +174,30 @@ void JNICALL Java_QBus_qbregister (JNIEnv* env, jobject o, jlong ptr, jstring me
 
 //-----------------------------------------------------------------------------
 
-void JNICALL Java_qbusJNI_send (JNIEnv* env, jobject instance)
+void JNICALL Java_QBus_qbsend(JNIEnv* env, jobject o, jlong ptr, jstring module, jstring method, jstring cdata)
 {
+  QBus qbus = (QBus)ptr;
   
+  const char* module_text = (*env)->GetStringUTFChars(env, module, 0);
+  
+  const char* method_text = (*env)->GetStringUTFChars(env, method, 0);
+  
+  const char* cdata_text = (*env)->GetStringUTFChars(env, cdata, 0);
+  QBusM  msg = qbus_message_new (NULL, NULL);
+  msg->cdata = cape_json_from_s(cdata_text);
+  
+  CapeErr err = cape_err_new ();
+  
+  int res = qbus_send (qbus, module_text, method_text, msg, NULL, NULL, err);
+  if (res)
+  {
+    
+    
+  }
+  
+  qbus_message_del (&msg);
+
+  cape_err_del (&err);
 }
 
 //-----------------------------------------------------------------------------

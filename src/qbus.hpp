@@ -6,6 +6,7 @@
 
 // qbus include
 #include <qbus.h>
+#include <stdexcept>
 
 namespace qbus
 {

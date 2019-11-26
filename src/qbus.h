@@ -57,6 +57,8 @@ __CAPE_LIBEX   int                qbus_register          (QBus, const char* meth
 
 __CAPE_LIBEX   int                qbus_send              (QBus, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage, CapeErr);
 
+__CAPE_LIBEX   int                qbus_test_s           (QBus, const char* module, const char* method, CapeErr);   // Called from java with JNI
+
 __CAPE_LIBEX   int                qbus_continue          (QBus, const char* module, const char* method, QBusM qin, void** p_ptr, fct_qbus_onMessage, CapeErr);
 
 __CAPE_LIBEX   int                qbus_response          (QBus, const char* module, QBusM msg, CapeErr);

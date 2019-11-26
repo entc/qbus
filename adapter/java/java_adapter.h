@@ -18,7 +18,7 @@ JNIEXPORT  void   JNICALL Java_QBus_qbwait       (JNIEnv*, jobject, jlong, jstri
 
 JNIEXPORT  void   JNICALL Java_QBus_qbregister   (JNIEnv*, jobject, jlong, jstring method, jobject callback);
 
-JNIEXPORT  void   JNICALL Java_qbusJNI_send      (JNIEnv*, jobject);
+JNIEXPORT  void   JNICALL Java_QBus_qbsend   (JNIEnv*, jobject, jlong , jstring module, jstring method, jstring cdata);
 
 //-----------------------------------------------------------------------------
 
