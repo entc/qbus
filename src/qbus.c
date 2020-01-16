@@ -620,6 +620,19 @@ const CapeString qbus_config_s (QBus self, const char* name, const CapeString de
 
 //-----------------------------------------------------------------------------
 
+CapeUdc qbus_config_node (QBus self, const char* name)
+{
+  if (self->config == NULL)
+  {
+    return NULL;
+  }
+  
+  // search for UDC
+  return cape_udc_get (self->config, name);
+}
+
+//-----------------------------------------------------------------------------
+
 number_t qbus_config_n (QBus self, const char* name, number_t default_val)
 {
   CapeUdc config_node;

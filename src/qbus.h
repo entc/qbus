@@ -79,6 +79,8 @@ __CAPE_LIBEX   double             qbus_config_f          (QBus, const char* name
 
 __CAPE_LIBEX   int                qbus_config_b          (QBus, const char* name, int default_val);
 
+__CAPE_LIBEX   CapeUdc            qbus_config_node       (QBus, const char* name);
+
 //-----------------------------------------------------------------------------
 
 struct QBusConnection_s; typedef struct QBusConnection_s* QBusConnection;

@@ -1190,6 +1190,7 @@ void qbus_route_request__local_request (QBusRoute self, const char* method_origi
 
 int qbus_route_request (QBusRoute self, const char* module, const char* method, QBusM msg, void* ptr, fct_qbus_onMessage onMsg, int cont, CapeErr err)
 {
+  /*
   if (cape_str_compare (module, self->name))
   {
     cape_log_fmt (CAPE_LL_TRACE, "QBUS", "request", "execute local request on '%s'", module);
@@ -1199,6 +1200,7 @@ int qbus_route_request (QBusRoute self, const char* module, const char* method, 
     return CAPE_ERR_NONE;
   }
   else
+  */
   {
     QBusConnection const conn = qbus_route_module_find (self, module);
     
