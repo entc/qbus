@@ -101,6 +101,8 @@ int qbus_method_call_request (QBusMethod self, QBus qbus, QBusFrame frame, CapeE
   
   if (self->onMsg)
   {
+    CapeUdc rinfo = NULL;
+    
     // convert the frame content into the input message (expensive)
     QBusM qin = qbus_frame_qin (frame);
 
@@ -111,11 +113,13 @@ int qbus_method_call_request (QBusMethod self, QBus qbus, QBusFrame frame, CapeE
     res = self->onMsg (qbus, self->ptr, qin, qout, err);
 
     // override the frame content with the output message (expensive)
-    qbus_frame_set_qmsg (frame, qout, err);
+    rinfo = qbus_frame_set_qmsg (frame, qout, err);
     
     // cleanup    
     qbus_message_del (&qin);
     qbus_message_del (&qout);
+    
+    cape_udc_del (&rinfo);
   }
   
   return res;
@@ -1227,6 +1231,8 @@ void qbus_route_response (QBusRoute self, const char* module, QBusM msg, CapeErr
   
   if (conn)
   {
+    CapeUdc rinfo = NULL;
+    
     // create a new frame
     QBusFrame frame = qbus_frame_new ();
     
@@ -1234,10 +1240,12 @@ void qbus_route_response (QBusRoute self, const char* module, QBusM msg, CapeErr
     qbus_frame_set (frame, QBUS_FRAME_TYPE_MSG_RES, msg->chain_key, module, NULL, self->name);
     
     // add message content
-    qbus_frame_set_qmsg (frame, msg, err);
+    rinfo = qbus_frame_set_qmsg (frame, msg, err);
     
     // finally send the frame
     qbus_connection_send (conn, &frame);
+    
+    cape_udc_del (&rinfo);
   }
   else
   {

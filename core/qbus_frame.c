@@ -213,12 +213,16 @@ CapeUdc qbus_frame_set_qmsg (QBusFrame self, QBusM qmsg, CapeErr err)
 
 void qbus_frame_set_err (QBusFrame self, CapeErr err)
 {
+  CapeUdc rinfo = NULL;
   CapeUdc payload = cape_udc_new (CAPE_UDC_NODE, NULL);
   
   cape_udc_add_s_cp (payload, "err_text", cape_err_text (err));
   cape_udc_add_n (payload, "err_code", cape_err_code (err));
   
-  qbus_frame_set_udc (self, QBUS_MTYPE_JSON, &payload);
+  rinfo = qbus_frame_set_udc (self, QBUS_MTYPE_JSON, &payload);
+  
+  // cleanup
+  cape_udc_del (&rinfo);
 }
 
 //-----------------------------------------------------------------------------
